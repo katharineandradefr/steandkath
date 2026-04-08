@@ -3,4 +3,12 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  --color-brand: #e2263c;
+  --color-brand-bright: #ff4d62;
+  --color-shell: #0a0607;
+  --color-shell-mid: #1c0c10;
+  --color-shell-warm: #2a1418;
+  --color-sidebar: #120809;
+  --color-sidebar-border: color-mix(in oklab, #e2263c 22%, transparent);
 }
