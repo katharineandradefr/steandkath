@@ -1,6 +1,6 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
@@ -9,11 +9,15 @@ export const metadata: Metadata = {
   title: "Vibe coding — modelo",
   description:
     "Modelo Next.js + tRPC + MongoDB para aprender a construir com IA.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [{ rel: "icon", url: "/header-logo.svg", type: "image/svg+xml" }],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#e2263c",
 };
 
 const geist = Geist({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-geist-sans",
 });
 
