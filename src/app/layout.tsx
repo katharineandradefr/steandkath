@@ -2,7 +2,10 @@ import "~/styles/globals.css";
 
 import { type Metadata, type Viewport } from "next";
 import { Geist } from "next/font/google";
+import { getServerSession } from "next-auth";
 
+import { AuthSessionProvider } from "~/app/_components/auth-session-provider";
+import { authOptions } from "~/server/auth/auth-options";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -21,13 +24,19 @@ const geist = Geist({
   variable: "--font-geist-sans",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="pt-BR" className={`${geist.variable}`}>
       <body className="min-h-screen bg-shell text-white antialiased">
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <AuthSessionProvider session={session}>
+            {children}
+          </AuthSessionProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );

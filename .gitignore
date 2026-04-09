@@ -39,3 +39,6 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# SQLite local database (keep data/.gitkeep)
+/data/*.db
