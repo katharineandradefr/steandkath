@@ -49,11 +49,28 @@ A small [T3 Stack](https://create.t3.gg/)–style starter for learning **vibe co
 | Mongoose models | `src/server/db/models/` | Database shapes |
 | DB connection | `src/server/db/connection.ts` | Single shared Mongo connection |
 | Env validation | `src/env.js` | Safe list of environment variables |
-| AI hints | `.cursorrules` | Rules for Cursor / Copilot-style assistants |
+| Business rules | `docs/business-rules/` | Regras de negócio e requisitos |
+| AI rules (Cursor) | `.cursor/rules/` | Comportamento da assistente |
+| AI hints (legacy) | `.cursorrules` | Índice rápido para a IA |
 
 ## Using Cursor (or another AI editor)
 
-Open the folder in Cursor. The **`.cursorrules`** file nudges the assistant to keep secrets server-side, use tRPC, and change only what is needed. Describe what you want in plain language; one feature at a time works best.
+Open the folder in Cursor. Rules in **`.cursor/rules/`** teach the assistant to:
+
+- Read `docs/business-rules/` before implementing
+- Ask questions when requirements are unclear
+- Suggest plan reviews and Git sync before risky changes
+- **Explain every terminal command in plain language** (see `terminal-commands.mdc`)
+- Explain changes in plain language for beginners
+
+**Useful prompt references:**
+
+```
+@docs/project-context.md
+@docs/business-rules/pendencies-kanban.md
+```
+
+Describe what you want in plain language; one feature at a time works best.
 
 ## Scripts
 

@@ -1,0 +1,44 @@
+---
+description: Padrões de código — TypeScript, Zod, mudanças mínimas
+alwaysApply: true
+---
+
+# Padrões de código
+
+## Mudanças mínimas
+
+- Alterar **somente** o necessário para a tarefa
+- Não refatorar arquivos não relacionados
+- Não fazer cleanup não solicitado
+- Menos linhas = menos dívida técnica
+
+## TypeScript
+
+- Evitar `any`
+- Preferir tipos inferidos de Zod e Mongoose
+- Procedures focadas: uma responsabilidade clara por procedure
+
+## Validação
+
+- Zod em todos os inputs tRPC
+- Preferir `publicProcedure` até auth/RBAC ser implementado; migrar para `protectedProcedure` quando aplicável
+
+## Funções
+
+- Early returns para reduzir aninhamento
+- Nomes descritivos
+- JSDoc no início de funções novas quando a lógica não for óbvia
+
+## Estilo
+
+- Preferir estilo funcional e imutável quando não tornar o código verboso
+- Funções privadas para encapsular lógica interna
+
+## Qualidade
+
+- Manter código legível e testável
+- Evitar abstrações prematuras (helpers de 1–2 linhas)
+
+## Bugs existentes
+
+Se encontrar bug fora do escopo, usar comentário `TODO:` descrevendo o problema — não corrigir silenciosamente em tarefa unrelated.

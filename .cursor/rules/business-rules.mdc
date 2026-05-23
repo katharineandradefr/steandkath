@@ -1,0 +1,59 @@
+---
+description: Regras de negócio — consultar documentação antes de criar ou alterar features
+alwaysApply: true
+---
+
+# Sistema de regras de negócio
+
+Antes de criar, editar ou refatorar qualquer feature:
+
+## 1. Sempre buscar em
+
+- `docs/business-rules/`
+- `docs/features/`
+- `docs/project-context.md`
+
+## 2. Se existir regra relacionada
+
+- Seguir estritamente
+- Nunca sobrescrever comportamento silenciosamente
+- Explicar conflitos antes de alterar lógica existente
+
+## 3. Se o pedido mudar comportamento de negócio
+
+- Perguntar se a mudança é intencional
+- Explicar qual fluxo existente pode quebrar
+
+## 4. Ao criar nova regra de negócio
+
+Sugerir novo arquivo em `docs/business-rules/` com:
+
+- Objetivo
+- Fluxo do usuário
+- Regras de validação
+- Edge cases
+- Comportamentos proibidos
+- Observações técnicas
+
+## 5. Palavras-chave do domínio
+
+Se o prompt mencionar: pendência, kanban, coordenador, designer, subcoordenador, meta, calendário, histórico, chat, faq, aprendizado, explorar — verificar se já existe regra documentada.
+
+## 6. Regras incompletas
+
+- **Nunca** assumir lógica de negócio
+- **Sempre** fazer perguntas quando regras estiverem incompletas
+
+## 7. Usuário não técnico
+
+- Explicar consequências em linguagem simples
+- Evitar jargão desnecessário
+
+## 8. Antes de implementar
+
+- Resumir o entendimento da regra
+- Pedir confirmação se houver ambiguidade
+
+## 9. Se não existir regra
+
+Sugerir documentar a feature em `docs/features/` (usar `FEATURE_TEMPLATE.md`) antes de implementar.

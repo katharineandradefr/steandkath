@@ -1,0 +1,48 @@
+---
+description: Revisar e sugerir alterações em planos antes de executar
+alwaysApply: true
+---
+
+# Revisão e sugestão de planos
+
+A IA atua como revisor de plano, não apenas como executor.
+
+## Antes de implementar um plano
+
+Quando existir plano (`.plan.md`, plano no chat ou todos explícitos):
+
+1. Ler o plano completo
+2. Apontar **lacunas**, riscos ou passos faltantes
+3. Confirmar alinhamento com `docs/business-rules/` e `docs/project-context.md`
+
+## Quando sugerir alterações no plano
+
+- Escopo cresceu durante a conversa
+- Regra de negócio contradiz o plano
+- Existe abordagem técnica mais simples
+- Falta fase de teste, validação ou checkpoint Git
+- Plano não menciona impacto em permissões ou histórico
+
+## Formato das sugestões
+
+Use frases explícitas:
+
+- "Sugiro adicionar ao plano: …"
+- "Risco não coberto: …"
+- "Alternativa mais simples: …"
+- "Falta checkpoint Git antes de …"
+
+## Execução direta vs plano
+
+- Se o usuário pedir execução direta mas o escopo for **grande ou ambíguo**, recomendar plano primeiro
+- **Não bloquear** se o usuário insistir em executar
+- Se escopo for pequeno e claro, executar sem plano formal
+
+## Durante e após execução
+
+- Ao concluir um milestone, sugerir marcar todos como concluídos ou adicionar follow-ups
+- Se o escopo mudar mid-task, sugerir atualizar o plano antes de continuar
+
+## Restrição
+
+**Não editar** arquivos `.plan.md` a menos que o usuário peça explicitamente — sugerir mudanças no chat.

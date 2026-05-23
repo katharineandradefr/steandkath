@@ -1,0 +1,51 @@
+---
+description: Análise de requisitos — perguntar antes de implementar suposições
+alwaysApply: true
+---
+
+# Análise de requisitos e perguntas
+
+Atuar como analista de negócio: entender antes de codar.
+
+## Sempre identificar antes de implementar
+
+- Objetivo e usuários afetados (papéis 1–4 — ver `docs/business-rules/user-roles-permissions.md`)
+- Validações e edge cases
+- Permissões (quem pode fazer o quê)
+- Cenários de falha e reversibilidade
+- Se a ação deve gerar log/histórico
+
+## Perguntas padrão quando a informação faltar
+
+- Quem pode acessar ou executar esta ação?
+- O que acontece se falhar?
+- Pode ser editado ou desfeito depois?
+- Afeta usuários ou dados existentes?
+- Deve ser registrado no histórico?
+- Há níveis de permissão envolvidos?
+- E se dois usuários fizerem ao mesmo tempo?
+
+## Gatilhos de domínio steandkath
+
+Se o prompt mencionar: pendência, pendency, kanban, coordenador, designer, subcoordenador, meta, calendário, histórico, chat, faq, aprendizado, explorar — **ler** o doc correspondente em `docs/business-rules/` antes de responder ou implementar.
+
+| Tema | Documento |
+|------|-----------|
+| Kanban / tela inicial | `docs/business-rules/pendencies-kanban.md` |
+| Papéis e permissões | `docs/business-rules/user-roles-permissions.md` |
+| Histórico / auditoria | `docs/business-rules/activity-history.md` |
+| Calendário / metas | `docs/business-rules/calendar-goals.md` |
+| Chat | `docs/business-rules/chat-collaboration.md` |
+| FAQ / IA | `docs/business-rules/faq-ai-chatbot.md` |
+
+## Quando NÃO perguntar
+
+- Bug óbvio com stack trace claro
+- Typo ou correção mecânica já 100% especificada
+- Usuário pediu explicitamente execução direta após plano aprovado
+
+## Formato das perguntas
+
+- Agrupar dúvidas relacionadas em uma mensagem
+- Priorizar perguntas que bloqueiam implementação correta
+- Explicar por que a pergunta importa (1 frase)

@@ -1,36 +1,22 @@
-# Vibe coding template — guidance for the AI assistant
+# steandkath — guidance for the AI assistant
 
-## Audience
-The human using this repo is learning to build with AI and may not be technical. Prefer small, safe changes. Explain what you changed in plain language when it helps.
+Regras completas do projeto estão em:
 
-## Stack
+- **Comportamento da IA:** `.cursor/rules/` (pensar, perguntar, revisar planos, Git, explicar comandos de terminal)
+- **Regras de negócio:** `docs/business-rules/`
+- **Contexto do projeto:** `docs/project-context.md`
+
+## Stack (resumo)
+
 - Next.js App Router (`src/app/`)
-- tRPC for all server APIs (`src/server/api/routers/`)
+- tRPC (`src/server/api/routers/`)
 - MongoDB via Mongoose (`src/server/db/`)
-- Tailwind CSS for styling
+- Tailwind CSS
 
-## Secrets and environment variables
-- Put API keys, database URLs, and any secret in `.env` using **server-only** names (no `NEXT_PUBLIC_` prefix).
-- Never suggest exposing secrets to the browser. Client components must not read `process.env` for secrets.
-- When adding a new server env var, update `src/env.js` (Zod schema + `runtimeEnv`) and `.env.example`.
+Secrets em `.env` (server-only). Validar novas vars em `src/env.js` e `.env.example`.
 
-## Data and backend rules
-- Read and write data only from tRPC procedures (or other server-only code). Do not call the database from client components.
-- Add Mongoose models under `src/server/db/models/`. Reuse models; avoid duplicating schemas.
-- Add or extend routers under `src/server/api/routers/`, then register them in `src/server/api/root.ts`.
-- Use Zod for procedure `input` validation. Prefer `publicProcedure` unless auth is added later.
+## Antes de codar
 
-## Frontend rules
-- In Client Components, use `import { api } from "~/trpc/react"` for queries and mutations.
-- In Server Components, use `import { api } from "~/trpc/server"` for calls and prefetching.
-- Use Tailwind utility classes. Keep layouts readable and accessible (labels on inputs, button types, focus states).
-
-## TypeScript and quality
-- Avoid `any`. Prefer inferred types from Zod and Mongoose.
-- Keep procedures focused: one clear responsibility per procedure name.
-- Make minimal edits; do not refactor unrelated files.
-
-## When the user is stuck
-- Suggest they copy `.env.example` to `.env` and set `MONGODB_URI`.
-- Suggest `pnpm install` and `pnpm dev` to run the app.
-
+1. Ler docs relevantes em `docs/business-rules/`
+2. Resumir entendimento se a tarefa for ambígua
+3. Sugerir sync Git antes de mudanças arriscadas

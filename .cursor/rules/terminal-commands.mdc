@@ -1,0 +1,80 @@
+---
+description: Explicar todo comando de terminal em linguagem simples antes de executar
+alwaysApply: true
+---
+
+# Comandos de terminal — explicação obrigatória
+
+**Regra absoluta:** antes de pedir ou executar **qualquer** comando no terminal (Shell), a IA deve incluir um **resumo em linguagem simples** para quem não programa.
+
+Isso vale para **todos** os comandos: Git, `pnpm`, `npm`, `node`, cópia de arquivos, scripts, Docker, etc.
+
+## Formato obrigatório
+
+Imediatamente **antes** de cada comando (ou bloco de comandos), escrever:
+
+### O que este comando faz
+
+- 1–3 frases em português claro
+- Sem jargão; se usar termo técnico, explicar entre parênteses
+- Dizer **o que muda** no computador/projeto (cria arquivo? baixa algo? apaga algo?)
+- Dizer se é **seguro**, **irreversível** ou **pode demorar**
+
+### Exemplo
+
+**O que este comando faz:** Baixa e instala as bibliotecas que o projeto precisa para rodar. Não apaga seu código; pode levar alguns minutos na primeira vez.
+
+```bash
+pnpm install
+```
+
+## Múltiplos comandos
+
+Se houver mais de um comando na sequência:
+
+- Explicar **cada comando** separadamente, **ou**
+- Explicar o bloco inteiro + bullet por comando
+
+Nunca colar uma sequência longa sem explicação.
+
+## Comandos de risco alto
+
+Além da explicação simples, **destacar em negrito** quando o comando:
+
+- Apaga ou sobrescreve arquivos
+- Altera histórico Git de forma difícil de reverter
+- Muda banco de dados ou `.env`
+- Instala/atualiza dependências em massa
+- Expõe portas ou serviços na rede
+
+Exemplo: **Atenção:** este comando remove arquivos permanentemente do disco.
+
+## Comandos Git
+
+Seguir também `git-sync.mdc`. Sempre explicar o equivalente leigo:
+
+| Comando | Explicação leiga (modelo) |
+|---------|---------------------------|
+| `git status` | Mostra o que você alterou localmente e se está sincronizado com o GitHub |
+| `git add` | Prepara suas alterações para serem salvas no próximo "pacote" (commit) |
+| `git commit` | Salva um ponto de restauração no histórico local com uma mensagem |
+| `git push` | Envia seus commits para o GitHub (backup remoto) |
+| `git pull` | Traz alterações do GitHub para sua máquina |
+
+## Comandos comuns do projeto
+
+| Comando | Explicação leiga (modelo) |
+|---------|---------------------------|
+| `pnpm dev` | Liga o servidor de desenvolvimento para abrir o site no navegador |
+| `pnpm build` | Gera a versão otimizada do site para publicar |
+| `pnpm check` | Verifica erros de código e formatação sem alterar arquivos |
+| `cp .env.example .env` | Copia o modelo de configurações para você preencher senhas e URLs |
+
+## Quando o usuário é desenvolvedor
+
+Se o usuário pedir explicitamente "sem explicação" ou "modo técnico", pode encurtar — mas **ainda** incluir uma linha mínima do tipo: "Roda o linter do projeto."
+
+## Proibido
+
+- Executar ou sugerir comando no terminal **sem** a seção "O que este comando faz"
+- Assumir que o usuário sabe o que `pnpm`, `git`, `rm`, `curl` ou similares significam

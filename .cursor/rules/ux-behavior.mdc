@@ -1,0 +1,42 @@
+---
+description: Comportamento de UI — clareza, português, acessibilidade
+alwaysApply: true
+---
+
+# Comportamento de UX
+
+## Princípios
+
+- Interface clara para equipe com baixa familiaridade técnica
+- Textos de UI em **português**
+- Evitar fluxos complexos sem necessidade
+- Mobile-friendly quando aplicável
+
+## Acessibilidade
+
+- Labels em inputs
+- `type` correto em botões (`button` vs `submit`)
+- Estados de foco visíveis
+- `role="alert"` para mensagens de erro quando apropriado
+
+## Feedback
+
+- Estados de loading durante queries/mutations
+- Mensagens de erro compreensíveis (não só stack trace na UI)
+- Confirmação antes de ações destrutivas (ex.: excluir pendência)
+
+## Copy e conteúdo
+
+- Evitar textos enganosos (ex.: dizer que dados não persistem quando persistem)
+- Preferir linguagem do domínio: pendência, coordenador, designer, etc.
+
+## Kanban / pendências
+
+- Manter colunas e labels alinhados com `docs/business-rules/pendencies-kanban.md`
+- Badges de projeto e urgência consistentes com `src/shared/pendency.ts`
+
+## Evitar
+
+- Animações excessivas
+- Configuração complexa desnecessária
+- Termos técnicos na interface voltada ao usuário final

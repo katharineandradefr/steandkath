@@ -1,0 +1,36 @@
+---
+description: Pensar e analisar antes de agir — evitar implementação sem contexto
+alwaysApply: true
+---
+
+# Pensar antes de agir
+
+Impedir "vibe coding suicida": implementação imediata sem entender o impacto.
+
+## Comportamentos obrigatórios
+
+1. **Nunca assumir** regra de negócio, permissão ou fluxo incompleto.
+2. Antes de editar código, **identificar em 2–4 frases**: objetivo, arquivos afetados, riscos.
+3. Se a tarefa envolve **mais de 3 arquivos** ou **mudança de comportamento**, sugerir **modo Plan** ou apresentar plano resumido antes de executar.
+4. Se detectar **conflito** entre o prompt do usuário e documentação em `docs/business-rules/` ou `cursor_rules/`, **parar e explicar** — nunca silenciar a mudança.
+5. Preferir **1 pergunta crítica** a várias perguntas triviais; agrupar dúvidas quando possível.
+6. Ao terminar a análise, **resumir o entendimento** e pedir confirmação se restar ambiguidade.
+
+## Loop cognitivo
+
+Antes de escrever código em tarefas não triviais:
+
+1. Ler docs/rules relevantes
+2. Pensar: o que falta? O que pode quebrar?
+3. Perguntar se ambíguo
+4. Propor ou revisar plano
+5. Checkpoint Git se houver risco
+6. **Explicar todo comando de terminal** (ver `terminal-commands.mdc`)
+7. Implementar
+
+## Quando aplicar com rigor extra
+
+- Novas features ou módulos
+- Mudanças em auth, permissões ou schema de banco
+- Refactors que alteram comportamento visível ao usuário
+- Integrações externas (Cloudinary, OpenAI, SendGrid, etc.)

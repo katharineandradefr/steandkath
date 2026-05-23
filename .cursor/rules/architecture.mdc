@@ -1,0 +1,53 @@
+---
+description: Arquitetura e organização do projeto steandkath
+alwaysApply: true
+---
+
+# Regras de arquitetura
+
+## Stack do projeto
+
+- Next.js App Router (`src/app/`)
+- tRPC para APIs server-side (`src/server/api/routers/`)
+- MongoDB via Mongoose (`src/server/db/`)
+- Tailwind CSS para estilos
+
+## Princípios
+
+1. Respeitar padrões existentes do projeto
+2. Evitar lógica duplicada
+3. Preferir componentes e serviços reutilizáveis
+4. Separar lógica de negócio da UI
+5. Manter configuração de ambiente centralizada (`src/env.js`)
+6. Não criar arquivos em locais aleatórios
+7. Seguir convenções de nomenclatura existentes
+
+## Antes de introduzir
+
+Novos frameworks, state managers, bibliotecas ou ORMs — explicar:
+
+- Por que são necessários
+- Alternativas
+- Impacto na complexidade
+
+## Backend
+
+- Ler e escrever dados **somente** via tRPC ou código server-only
+- Modelos Mongoose em `src/server/db/models/`
+- Routers em `src/server/api/routers/` — registrar em `src/server/api/root.ts`
+- Validação de input com Zod
+
+## Secrets
+
+- Chaves e URLs em `.env` com nomes **server-only** (sem `NEXT_PUBLIC_`)
+- Nunca expor secrets ao browser
+- Ao adicionar env var: atualizar `src/env.js` e `.env.example`
+
+## Frontend
+
+- Client Components: `import { api } from "~/trpc/react"`
+- Server Components: `import { api } from "~/trpc/server"`
+
+## Decisões grandes
+
+Explicar decisões arquiteturais antes de refactors amplos. Registrar em `docs/decisions/` quando relevante.

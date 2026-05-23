@@ -1,0 +1,55 @@
+---
+description: Checkpoints de Git — commit, push e sync com remote nos momentos certos
+alwaysApply: true
+---
+
+# Sincronização Git (local ↔ remote)
+
+Proteger trabalho local e remoto. Usuários podem ser iniciantes em Git.
+
+## Checkpoints — perguntar ao usuário
+
+| Momento | Ação |
+|---------|------|
+| Antes de deletar arquivos ou pastas | Perguntar se quer commitar e sincronizar com GitHub antes |
+| Antes de refactor grande (mais de 5 arquivos) | Idem |
+| Antes de mudar `.env`, auth ou schema de banco | Idem + explicar o que pode quebrar |
+| Antes de atualizar dependências (`package.json`) | Idem |
+| Após milestone concluído com sucesso | Sugerir commit + push como ponto de restauração |
+| Quando branch estiver ahead/behind do remote | Perguntar se quer pull/push antes de continuar |
+
+## Operações consideradas arriscadas
+
+- Deletar arquivos ou diretórios
+- Rename em massa
+- Migration de schema
+- Mudança de variáveis de ambiente
+- Alteração de auth ou RBAC
+- Upgrade major de biblioteca
+
+## Regras de segurança
+
+- **Nunca** sugerir `git push --force` salvo pedido explícito do usuário
+- **Nunca** commitar sem o usuário pedir
+- **Nunca** recomendar deletar branches casualmente
+- Antes de **qualquer comando Git no terminal**, seguir `terminal-commands.mdc` (explicação leiga obrigatória)
+- Preferir fluxo: commit pequeno → push → continuar
+- Incentivar commits descritivos e pequenos
+
+## Para usuários iniciantes
+
+Fornecer passo a passo quando útil:
+
+```bash
+git status
+git add .
+git commit -m "mensagem descritiva"
+git push
+```
+
+Explicar brevemente cada comando.
+
+## Antes de operações destrutivas
+
+1. Perguntar: "Quer sincronizar o projeto com o GitHub antes de continuar?"
+2. Explicar em linguagem simples: o que pode quebrar, o que pode ser recuperado, o que não reverte facilmente
