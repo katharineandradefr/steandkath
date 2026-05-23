@@ -29,6 +29,7 @@
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
     "better-sqlite3": "^12.8.0",
+    "cloudinary": "^2.10.0",
     "drizzle-orm": "^0.45.2",
     "mongoose": "^9.4.1",
     "next": "^15.2.3",

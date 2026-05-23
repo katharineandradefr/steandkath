@@ -12,16 +12,17 @@ import {
 
 import { useMemo, useState } from "react";
 
-import { MOCK_PENDENCIES } from "~/app/(app)/_data/mock-pendencies";
 import {
-  createEmptyPendencyDraft,
+  DEFAULT_AREA_KEY,
   filterPendenciesBySearch,
   filterPendenciesByUrgency,
   groupPendenciesByStatus,
   PENDENCY_STATUSES,
   type Pendency,
+  type PendencyFormValues,
   type PendencyUrgency,
 } from "~/shared/pendency";
+import { api } from "~/trpc/react";
 
 import { PendencyDetailModal } from "./modal/pendency-detail-modal";
 import { applyDragEnd } from "./pendency-board-utils";
@@ -30,12 +31,21 @@ import { PendencyCard } from "./pendency-card";
 import { PendencyColumn } from "./pendency-column";
 
 /**
- * Board Kanban de pendências com estado local, modal e drag-and-drop.
+ * Monta o payload de reorder a partir da lista atualizada.
+ */
+function buildReorderMoves(pendencies: Pendency[]) {
+  return pendencies.map((p) => ({
+    id: p.id,
+    status: p.status,
+    position: p.position,
+  }));
+}
+
+/**
+ * Board Kanban de pendências com persistência MongoDB via tRPC.
  */
 export function PendencyBoard() {
-  const [pendencies, setPendencies] = useState<Pendency[]>(() => [
-    ...MOCK_PENDENCIES,
-  ]);
+  const utils = api.useUtils();
   const [urgencyFilter, setUrgencyFilter] = useState<PendencyUrgency | null>(
     null,
   );
@@ -43,9 +53,109 @@ export function PendencyBoard() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingPendency, setEditingPendency] = useState<Pendency | null>(
-    null,
-  );
+  const [editingPendency, setEditingPendency] = useState<Pendency | null>(null);
+
+  const listInput = {};
+  const { data: pendencies = [], isLoading, isError } =
+    api.pendency.list.useQuery(listInput);
+
+  const setListCache = (updater: (prev: Pendency[]) => Pendency[]) => {
+    utils.pendency.list.setData(listInput, (prev) =>
+      updater(prev ?? []),
+    );
+  };
+
+  const createMutation = api.pendency.create.useMutation({
+    onMutate: async (input) => {
+      await utils.pendency.list.cancel(listInput);
+      const previous = utils.pendency.list.getData(listInput) ?? [];
+      const now = new Date().toISOString();
+      const optimistic: Pendency = {
+        id: crypto.randomUUID(),
+        areaKey: input.areaKey ?? DEFAULT_AREA_KEY,
+        title: input.title,
+        description: null,
+        descriptionMarkdown: input.descriptionMarkdown ?? "",
+        projectKey: input.projectKey,
+        status: "pending",
+        urgency: input.urgency,
+        position: previous.filter((p) => p.status === "pending").length,
+        attachments: [],
+        links: input.links ?? [],
+        checklist: input.checklist ?? [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      setListCache((prev) => [...prev, optimistic]);
+      return { previous, optimisticId: optimistic.id };
+    },
+    onSuccess: (saved, _input, context) => {
+      setListCache((prev) =>
+        prev.map((p) => (p.id === context?.optimisticId ? saved : p)),
+      );
+    },
+    onError: (_err, _input, context) => {
+      utils.pendency.list.setData(listInput, context?.previous);
+    },
+    onSettled: () => {
+      void utils.pendency.list.invalidate(listInput);
+    },
+  });
+
+  const updateMutation = api.pendency.update.useMutation({
+    onMutate: async ({ id, patch }) => {
+      await utils.pendency.list.cancel(listInput);
+      const previous = utils.pendency.list.getData(listInput) ?? [];
+      setListCache((prev) =>
+        prev.map((p): Pendency => {
+          if (p.id !== id) return p;
+          const descriptionMarkdown =
+            patch.descriptionMarkdown ?? p.descriptionMarkdown;
+          const excerpt = descriptionMarkdown.trim().split("\n")[0]?.trim() ?? "";
+          return {
+            ...p,
+            title: patch.title ?? p.title,
+            areaKey: patch.areaKey ?? p.areaKey,
+            descriptionMarkdown,
+            description: excerpt.length > 0 ? excerpt : null,
+            projectKey: patch.projectKey ?? p.projectKey,
+            urgency: patch.urgency ?? p.urgency,
+            links: patch.links ?? p.links,
+            checklist: patch.checklist ?? p.checklist,
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      );
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      utils.pendency.list.setData(listInput, context?.previous);
+    },
+    onSettled: () => {
+      void utils.pendency.list.invalidate(listInput);
+    },
+  });
+
+  const deleteMutation = api.pendency.delete.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.pendency.list.cancel(listInput);
+      const previous = utils.pendency.list.getData(listInput) ?? [];
+      setListCache((prev) => prev.filter((p) => p.id !== id));
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      utils.pendency.list.setData(listInput, context?.previous);
+    },
+    onSettled: () => {
+      void utils.pendency.list.invalidate(listInput);
+    },
+  });
+
+  const reorderMutation = api.pendency.reorder.useMutation({
+    onError: () => {
+      void utils.pendency.list.invalidate(listInput);
+    },
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -68,6 +178,8 @@ export function PendencyBoard() {
     ? pendencies.find((p) => p.id === activeDragId)
     : null;
 
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
   const openCreate = () => {
     setModalMode("create");
     setEditingPendency(null);
@@ -80,22 +192,31 @@ export function PendencyBoard() {
     setModalOpen(true);
   };
 
-  const handleSave = (saved: Pendency) => {
+  const handleSave = (values: PendencyFormValues) => {
+    const payload = {
+      areaKey: values.areaKey,
+      title: values.title,
+      descriptionMarkdown: values.descriptionMarkdown,
+      projectKey: values.projectKey,
+      urgency: values.urgency,
+      links: values.links,
+      checklist: values.checklist,
+      attachments: values.attachments,
+    };
+
     if (modalMode === "create") {
-      const pending = pendencies.filter((p) => p.status === "pending");
-      setPendencies((prev) => [
-        ...prev,
-        {
-          ...saved,
-          status: "pending",
-          position: pending.length,
-        },
-      ]);
-    } else {
-      setPendencies((prev) =>
-        prev.map((p) => (p.id === saved.id ? saved : p)),
-      );
+      createMutation.mutate(payload, {
+        onSuccess: () => setModalOpen(false),
+      });
+      return;
     }
+
+    if (!editingPendency) return;
+
+    updateMutation.mutate(
+      { id: editingPendency.id, patch: payload },
+      { onSuccess: () => setModalOpen(false) },
+    );
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -107,14 +228,35 @@ export function PendencyBoard() {
     setActiveDragId(null);
     if (!over) return;
 
-    setPendencies((prev) =>
-      applyDragEnd(prev, String(active.id), String(over.id)),
+    const next = applyDragEnd(
+      pendencies,
+      String(active.id),
+      String(over.id),
     );
+    setListCache(() => next);
+    reorderMutation.mutate({ moves: buildReorderMoves(next) });
   };
 
   const handleDelete = (id: string) => {
-    setPendencies((prev) => prev.filter((p) => p.id !== id));
+    if (!window.confirm("Remover esta pendência?")) return;
+    deleteMutation.mutate({ id });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-white/60">
+        Carregando pendências…
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-full items-center justify-center text-red-300">
+        Não foi possível carregar as pendências.
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -156,10 +298,11 @@ export function PendencyBoard() {
         open={modalOpen}
         mode={modalMode}
         initialValues={
-          modalMode === "edit" ? editingPendency : createEmptyPendencyDraft()
+          modalMode === "edit" ? editingPendency : null
         }
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
+        isSaving={isSaving}
       />
     </div>
   );

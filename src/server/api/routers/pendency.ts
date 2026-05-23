@@ -1,0 +1,233 @@
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  deleteAllAttachments,
+  deleteRemovedAttachments,
+  docToPendency,
+  excerptFromMarkdown,
+  resolveAttachments,
+} from "~/server/api/routers/pendency-helpers";
+import { PendencyModel } from "~/server/db/models/pendency";
+import {
+  DEFAULT_AREA_KEY,
+  PENDENCY_PROJECT_KEYS,
+  PENDENCY_STATUSES,
+  PENDENCY_URGENCIES,
+  type PendencyAttachment,
+  type PendencyProjectKey,
+  type PendencyStatus,
+  type PendencyUrgency,
+} from "~/shared/pendency";
+
+const projectKeySchema = z.enum(
+  PENDENCY_PROJECT_KEYS as unknown as [PendencyProjectKey, ...PendencyProjectKey[]],
+);
+const urgencySchema = z.enum(
+  PENDENCY_URGENCIES as unknown as [PendencyUrgency, ...PendencyUrgency[]],
+);
+const statusSchema = z.enum(
+  PENDENCY_STATUSES as unknown as [PendencyStatus, ...PendencyStatus[]],
+);
+
+const pendingAttachmentSchema = z.object({
+  id: z.string().uuid(),
+  fileName: z.string().min(1).max(255),
+  dataUrl: z.string().startsWith("data:image/"),
+  size: z.number().int().positive().max(5 * 1024 * 1024),
+  mimeType: z.string().startsWith("image/"),
+  pending: z.literal(true),
+});
+
+const savedAttachmentSchema = z.object({
+  id: z.string().uuid(),
+  fileName: z.string().min(1).max(255),
+  url: z.string().url(),
+  publicId: z.string().min(1),
+  provider: z.string().min(1),
+  mimeType: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  createdAt: z.string().datetime(),
+});
+
+const attachmentDraftSchema = z.union([
+  pendingAttachmentSchema,
+  savedAttachmentSchema,
+]);
+
+const linkSchema = z.object({
+  id: z.string().uuid(),
+  url: z.string().url(),
+  label: z.string().max(200).optional(),
+});
+
+const checklistItemSchema = z.object({
+  id: z.string().uuid(),
+  text: z.string().min(1).max(500),
+  checked: z.boolean(),
+});
+
+const pendencyWriteFieldsSchema = z.object({
+  areaKey: z.string().min(1).default(DEFAULT_AREA_KEY),
+  title: z.string().trim().min(1).max(500),
+  descriptionMarkdown: z.string().max(50_000).default(""),
+  projectKey: projectKeySchema,
+  urgency: urgencySchema,
+  links: z.array(linkSchema).max(20).default([]),
+  checklist: z.array(checklistItemSchema).max(50).default([]),
+  attachments: z.array(attachmentDraftSchema).max(8).default([]),
+});
+
+export const pendencyRouter = createTRPCRouter({
+  list: publicProcedure
+    .input(
+      z
+        .object({
+          areaKey: z.string().min(1).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const filter = input?.areaKey ? { areaKey: input.areaKey } : {};
+      const docs = await PendencyModel.find(filter)
+        .sort({ status: 1, position: 1 })
+        .exec();
+      return docs.map(docToPendency);
+    }),
+
+  create: publicProcedure
+    .input(pendencyWriteFieldsSchema)
+    .mutation(async ({ input }) => {
+      const attachments = await resolveAttachments(input.attachments);
+      const pendingCount = await PendencyModel.countDocuments({
+        areaKey: input.areaKey,
+        status: "pending",
+      }).exec();
+
+      const doc = await PendencyModel.create({
+        id: crypto.randomUUID(),
+        areaKey: input.areaKey,
+        title: input.title,
+        description: excerptFromMarkdown(input.descriptionMarkdown),
+        descriptionMarkdown: input.descriptionMarkdown,
+        projectKey: input.projectKey,
+        status: "pending",
+        urgency: input.urgency,
+        position: pendingCount,
+        attachments,
+        links: input.links,
+        checklist: input.checklist,
+      });
+
+      return docToPendency(doc);
+    }),
+
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        patch: pendencyWriteFieldsSchema.partial().extend({
+          attachments: z.array(attachmentDraftSchema).max(8).optional(),
+        }),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const existing = await PendencyModel.findOne({ id: input.id }).exec();
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pendência não encontrada." });
+      }
+
+      const previousAttachments: PendencyAttachment[] = existing.attachments.map(
+        (a) => ({
+          id: a.id,
+          fileName: a.fileName,
+          url: a.url,
+          publicId: a.publicId,
+          provider: a.provider,
+          mimeType: a.mimeType,
+          size: a.size,
+          width: a.width ?? undefined,
+          height: a.height ?? undefined,
+          createdAt: a.createdAt,
+        }),
+      );
+
+      const patch = input.patch;
+      let nextAttachments: PendencyAttachment[] = previousAttachments;
+
+      if (patch.attachments !== undefined) {
+        nextAttachments = await resolveAttachments(patch.attachments);
+        await deleteRemovedAttachments(previousAttachments, nextAttachments);
+      }
+
+      if (patch.title !== undefined) existing.title = patch.title;
+      if (patch.areaKey !== undefined) existing.areaKey = patch.areaKey;
+      if (patch.descriptionMarkdown !== undefined) {
+        existing.descriptionMarkdown = patch.descriptionMarkdown;
+        existing.description = excerptFromMarkdown(patch.descriptionMarkdown);
+      }
+      if (patch.projectKey !== undefined) existing.projectKey = patch.projectKey;
+      if (patch.urgency !== undefined) existing.urgency = patch.urgency;
+      if (patch.links !== undefined) existing.set("links", patch.links);
+      if (patch.checklist !== undefined) existing.set("checklist", patch.checklist);
+      if (patch.attachments !== undefined) existing.set("attachments", nextAttachments);
+
+      await existing.save();
+      return docToPendency(existing);
+    }),
+
+  delete: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const existing = await PendencyModel.findOne({ id: input.id }).exec();
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pendência não encontrada." });
+      }
+
+      const attachments = existing.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        url: a.url,
+        publicId: a.publicId,
+        provider: a.provider,
+        mimeType: a.mimeType,
+        size: a.size,
+        width: a.width ?? undefined,
+        height: a.height ?? undefined,
+        createdAt: a.createdAt,
+      }));
+
+      await deleteAllAttachments(attachments);
+      await PendencyModel.deleteOne({ id: input.id }).exec();
+      return { id: input.id };
+    }),
+
+  reorder: publicProcedure
+    .input(
+      z.object({
+        moves: z
+          .array(
+            z.object({
+              id: z.string().uuid(),
+              status: statusSchema,
+              position: z.number().int().nonnegative(),
+            }),
+          )
+          .min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const bulkOps = input.moves.map((move) => ({
+        updateOne: {
+          filter: { id: move.id },
+          update: { $set: { status: move.status, position: move.position } },
+        },
+      }));
+
+      await PendencyModel.bulkWrite(bulkOps);
+      return { updated: input.moves.length };
+    }),
+});

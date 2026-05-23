@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import {
   createEmptyPendencyDraft,
   type Pendency,
+  type PendencyFormValues,
 } from "~/shared/pendency";
 
 import { ModalAttachments } from "./modal-attachments";
@@ -22,11 +23,12 @@ type PendencyDetailModalProps = {
   mode: PendencyDetailModalMode;
   initialValues: Pendency | null;
   onClose: () => void;
-  onSave: (pendency: Pendency) => void;
+  onSave: (values: PendencyFormValues) => void;
+  isSaving?: boolean;
 };
 
 /**
- * Modal estilo Trello para criar ou editar uma pendência (estado local).
+ * Modal estilo Trello para criar ou editar uma pendência.
  */
 export function PendencyDetailModal({
   open,
@@ -34,8 +36,9 @@ export function PendencyDetailModal({
   initialValues,
   onClose,
   onSave,
+  isSaving = false,
 }: PendencyDetailModalProps) {
-  const [draft, setDraft] = useState<Pendency>(() =>
+  const [draft, setDraft] = useState<PendencyFormValues>(() =>
     createEmptyPendencyDraft(),
   );
   const [mounted, setMounted] = useState(false);
@@ -47,7 +50,7 @@ export function PendencyDetailModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && initialValues) {
-      setDraft({ ...initialValues });
+      setDraft({ ...initialValues, attachments: [...initialValues.attachments] });
     } else {
       setDraft(createEmptyPendencyDraft());
     }
@@ -71,7 +74,7 @@ export function PendencyDetailModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const patch = useCallback((partial: Partial<Pendency>) => {
+  const patch = useCallback((partial: Partial<PendencyFormValues>) => {
     setDraft((d) => ({
       ...d,
       ...partial,
@@ -93,7 +96,6 @@ export function PendencyDetailModal({
       descriptionMarkdown: draft.descriptionMarkdown,
       updatedAt: new Date().toISOString(),
     });
-    onClose();
   };
 
   if (!open || !mounted) return null;
@@ -164,16 +166,22 @@ export function PendencyDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-white/65 transition hover:text-white"
+            disabled={isSaving}
+            className="rounded-lg px-4 py-2 text-sm text-white/65 transition hover:text-white disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-bright"
+            disabled={isSaving}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-bright disabled:opacity-50"
           >
-            {mode === "create" ? "Criar" : "Salvar"}
+            {isSaving
+              ? "Salvando…"
+              : mode === "create"
+                ? "Criar"
+                : "Salvar"}
           </button>
         </footer>
       </div>

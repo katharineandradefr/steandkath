@@ -15,9 +15,42 @@ export type PendencyProjectKey =
 export type PendencyAttachment = {
   id: string;
   fileName: string;
-  dataUrl: string;
+  url: string;
+  publicId: string;
+  provider: string;
+  mimeType: string;
+  size: number;
+  width?: number;
+  height?: number;
   createdAt: string;
 };
+
+/** Anexo pendente de upload (ainda não persistido no storage). */
+export type PendencyAttachmentPending = {
+  id: string;
+  fileName: string;
+  dataUrl: string;
+  size: number;
+  mimeType: string;
+  pending: true;
+};
+
+/** Anexo no modal: já salvo ou aguardando upload no save. */
+export type PendencyAttachmentDraft =
+  | PendencyAttachment
+  | PendencyAttachmentPending;
+
+export function isPendingAttachment(
+  attachment: PendencyAttachmentDraft,
+): attachment is PendencyAttachmentPending {
+  return "pending" in attachment && attachment.pending === true;
+}
+
+export function getAttachmentPreviewUrl(
+  attachment: PendencyAttachmentDraft,
+): string {
+  return isPendingAttachment(attachment) ? attachment.dataUrl : attachment.url;
+}
 
 export type PendencyLink = {
   id: string;
@@ -29,6 +62,11 @@ export type ChecklistItem = {
   id: string;
   text: string;
   checked: boolean;
+};
+
+/** Valores do formulário/modal (anexos podem estar pendentes de upload). */
+export type PendencyFormValues = Omit<Pendency, "attachments"> & {
+  attachments: PendencyAttachmentDraft[];
 };
 
 export type Pendency = {
@@ -138,8 +176,8 @@ export const PENDENCY_URGENCY_STYLES: Record<
  * Rascunho vazio para criação de pendência no modal.
  */
 export function createEmptyPendencyDraft(
-  overrides?: Partial<Pendency>,
-): Pendency {
+  overrides?: Partial<PendencyFormValues>,
+): PendencyFormValues {
   const now = new Date().toISOString();
   const pendingPosition = overrides?.position ?? 0;
 

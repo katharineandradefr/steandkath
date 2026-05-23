@@ -2,17 +2,21 @@
 
 import { useCallback, useRef } from "react";
 
-import type { PendencyAttachment } from "~/shared/pendency";
+import {
+  getAttachmentPreviewUrl,
+  isPendingAttachment,
+  type PendencyAttachmentDraft,
+} from "~/shared/pendency";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 type ModalAttachmentsProps = {
-  attachments: PendencyAttachment[];
-  onChange: (attachments: PendencyAttachment[]) => void;
+  attachments: PendencyAttachmentDraft[];
+  onChange: (attachments: PendencyAttachmentDraft[]) => void;
 };
 
 /**
- * Anexos de imagem: colar, arrastar ou selecionar ficheiro.
+ * Anexos de imagem: colar, arrastar ou selecionar ficheiro (upload no save).
  */
 export function ModalAttachments({
   attachments,
@@ -28,7 +32,7 @@ export function ModalAttachments({
       );
       if (list.length === 0) return;
 
-      const added: PendencyAttachment[] = [];
+      const added: PendencyAttachmentDraft[] = [];
       for (const file of list) {
         if (file.size > MAX_BYTES) {
           window.alert(
@@ -41,7 +45,9 @@ export function ModalAttachments({
           id: crypto.randomUUID(),
           fileName: file.name,
           dataUrl,
-          createdAt: new Date().toISOString(),
+          size: file.size,
+          mimeType: file.type,
+          pending: true,
         });
       }
       if (added.length > 0) onChange([...attachments, ...added]);
@@ -142,7 +148,7 @@ export function ModalAttachments({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={a.dataUrl}
+                src={getAttachmentPreviewUrl(a)}
                 alt=""
                 className="h-12 w-12 shrink-0 rounded object-cover"
               />
@@ -151,7 +157,9 @@ export function ModalAttachments({
                   {a.fileName}
                 </p>
                 <p className="text-xs text-white/45">
-                  Adicionado em {formatDate(a.createdAt)}
+                  {isPendingAttachment(a)
+                    ? "Será enviado ao salvar"
+                    : `Adicionado em ${formatDate(a.createdAt)}`}
                 </p>
               </div>
               <button
