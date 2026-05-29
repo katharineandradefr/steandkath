@@ -1,51 +1,87 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
-const navItems = [
-  { href: "/", label: "Pendências" },
-  { href: "/explorar", label: "Explorar" },
-  { href: "/aprendizado", label: "Aprendizado" },
-] as const;
+import { SidebarNavItem } from "~/app/_components/sidebar/sidebar-nav-item";
+import { SIDEBAR_NAV_ITEMS } from "~/app/_components/sidebar/sidebar-nav";
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  expanded: boolean;
+  onToggle: () => void;
+  onMouseLeave?: () => void;
+};
+
+/**
+ * Sidebar fixa à esquerda: colapsada (ícones) ou expandida (ícones + labels).
+ */
+export function AppSidebar({ expanded, onToggle, onMouseLeave }: AppSidebarProps) {
   const pathname = usePathname();
 
+  const visibleItems = SIDEBAR_NAV_ITEMS.filter((item) => !item.disabled);
+
+  const isItemActive = (href: string | undefined) => {
+    if (!href) return false;
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
+
+  const handleSignOut = () => {
+    void signOut({ callbackUrl: "/" });
+  };
+
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5">
-        <Image
-          src="/header-logo.svg"
-          alt="Logo"
-          width={40}
-          height={40}
-          className="h-10 w-10"
-        />
-        <span className="font-semibold tracking-tight text-white">
-          <span className="text-brand-bright">Vibe</span> coding
-        </span>
-      </div>
-      <nav className="flex flex-col gap-1 p-3" aria-label="Principal">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={
-                isActive
-                  ? "rounded-lg border border-brand/35 bg-brand/20 px-3 py-2 text-sm font-medium text-white shadow-[0_0_24px_-8px_var(--color-brand)]"
-                  : "rounded-lg px-3 py-2 text-sm font-medium text-white/65 transition hover:bg-white/8 hover:text-white"
-              }
-            >
-              {item.label}
-            </Link>
-          );
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 flex flex-col rounded-tr-2xl rounded-br-2xl bg-sidebar-panel py-4 shadow-lg transition-[width] duration-300 ease-in-out ${
+        expanded ? "w-[220px]" : "w-[72px]"
+      }`}
+      aria-label="Navegação principal"
+      onMouseLeave={onMouseLeave}
+    >
+      <nav className="flex flex-1 flex-col gap-1 px-2">
+        {visibleItems.map((item) => {
+          if (item.kind === "toggle") {
+            return (
+              <SidebarNavItem
+                key={item.id}
+                label={item.label}
+                expanded={expanded}
+                icon={item.icon}
+                showChevronWhenExpanded
+                onClick={onToggle}
+                ariaLabel={expanded ? "Fechar menu" : "Abrir menu"}
+                ariaExpanded={expanded}
+              />
+            );
+          }
+
+          if (item.kind === "action" && item.id === "sair") {
+            return (
+              <SidebarNavItem
+                key={item.id}
+                label={item.label}
+                expanded={expanded}
+                icon={item.icon}
+                onClick={handleSignOut}
+              />
+            );
+          }
+
+          if (item.kind === "link" && item.href) {
+            return (
+              <SidebarNavItem
+                key={item.id}
+                label={item.label}
+                expanded={expanded}
+                href={item.href}
+                icon={item.icon}
+                useLogo={item.useLogo}
+                isActive={isItemActive(item.href)}
+              />
+            );
+          }
+
+          return null;
         })}
       </nav>
     </aside>

@@ -14,4 +14,13 @@
   --color-shell-warm: #2a1418;
   --color-sidebar: #120809;
   --color-sidebar-border: color-mix(in oklab, #e2263c 22%, transparent);
+
+  --color-sidebar-panel: #be1525;
+  --color-sidebar-icon: #5b0a0a;
+  --color-sidebar-icon-hover: #be1525;
+  --color-sidebar-item-hover: #8f0411;
+  --color-sidebar-icon-active: #f1f1f1;
+
+  --sidebar-width-collapsed: 4.5rem;
+  --sidebar-width-expanded: 13.75rem;
 }
