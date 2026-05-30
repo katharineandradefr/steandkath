@@ -12,6 +12,12 @@ export type PendencyProjectKey =
   | "internato"
   | "usa_fichas";
 
+export type PendencyAreaKey = "go" | "ped" | "prev" | "cir" | "cm";
+
+export type PendencyAudience = "design" | "medical_team";
+
+export type PendencyRecurrence = "none" | "weekly" | "monthly";
+
 export type PendencyAttachment = {
   id: string;
   fileName: string;
@@ -83,6 +89,10 @@ export type Pendency = {
   attachments: PendencyAttachment[];
   links: PendencyLink[];
   checklist: ChecklistItem[];
+  audience?: PendencyAudience | null;
+  professorResponsible?: string | null;
+  dueDate?: string | null;
+  recurrence?: PendencyRecurrence;
   createdAt: string;
   updatedAt: string;
 };
@@ -104,6 +114,60 @@ export const PENDENCY_PROJECT_KEYS: readonly PendencyProjectKey[] = [
   "internato",
   "usa_fichas",
 ] as const;
+
+export const PENDENCY_AREA_KEYS: readonly PendencyAreaKey[] = [
+  "go",
+  "ped",
+  "prev",
+  "cir",
+  "cm",
+] as const;
+
+export const PENDENCY_AREA_LABELS: Record<PendencyAreaKey, string> = {
+  go: "GO",
+  ped: "PED",
+  prev: "PREV",
+  cir: "CIR",
+  cm: "CM",
+};
+
+export const PENDENCY_AREA_FULL_LABELS: Record<PendencyAreaKey, string> = {
+  go: "Ginecologia e Obstetrícia",
+  ped: "Pediatria",
+  prev: "Preventiva",
+  cir: "Cirurgia",
+  cm: "Clínica Médica",
+};
+
+export const PENDENCY_AREA_BUTTON_STYLES: Record<PendencyAreaKey, string> = {
+  go: "bg-pink-500 text-white",
+  ped: "bg-amber-400 text-gray-900",
+  prev: "bg-emerald-600 text-white",
+  cir: "bg-sky-500 text-white",
+  cm: "bg-red-600 text-white",
+};
+
+export const PENDENCY_AUDIENCES: readonly PendencyAudience[] = [
+  "design",
+  "medical_team",
+] as const;
+
+export const PENDENCY_AUDIENCE_LABELS: Record<PendencyAudience, string> = {
+  design: "Design",
+  medical_team: "Equipe Médica",
+};
+
+export const PENDENCY_RECURRENCES: readonly PendencyRecurrence[] = [
+  "none",
+  "weekly",
+  "monthly",
+] as const;
+
+export const PENDENCY_RECURRENCE_LABELS: Record<PendencyRecurrence, string> = {
+  none: "N/A",
+  weekly: "Semanal",
+  monthly: "Mensal",
+};
 
 export const PENDENCY_STATUS_LABELS: Record<PendencyStatus, string> = {
   pending: "Pendente",
@@ -142,6 +206,9 @@ export const PENDENCY_PROJECT_STYLES: Record<
 };
 
 export const DEFAULT_AREA_KEY = "default";
+
+/** Área padrão para novos formulários do calendário. */
+export const CALENDAR_DEFAULT_AREA_KEY: PendencyAreaKey = "cm";
 
 export const DEFAULT_AREA_TITLE = "Clínica Médica";
 
@@ -194,10 +261,74 @@ export function createEmptyPendencyDraft(
     attachments: [],
     links: [],
     checklist: [],
+    audience: null,
+    professorResponsible: null,
+    dueDate: null,
+    recurrence: "none",
     createdAt: now,
     updatedAt: now,
     ...overrides,
   };
+}
+
+/** Rascunho do formulário de pendência no calendário. */
+export type CalendarPendencyDraft = {
+  area: PendencyAreaKey | null;
+  audience: PendencyAudience | null;
+  description: string;
+  dueDate: string;
+  recurrence: PendencyRecurrence;
+  professorResponsible: string;
+};
+
+/**
+ * Rascunho vazio para coluna do modal de pendência no calendário.
+ */
+export function createEmptyCalendarPendencyDraft(
+  defaultAudience: PendencyAudience,
+): CalendarPendencyDraft {
+  return {
+    area: null,
+    audience: defaultAudience,
+    description: "",
+    dueDate: "",
+    recurrence: "none",
+    professorResponsible: "",
+  };
+}
+
+/**
+ * Remove tags HTML e retorna texto plano.
+ */
+export function stripHtmlToPlainText(input: string): string {
+  return input
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
+/**
+ * Verifica se conteúdo HTML/rich text está vazio.
+ */
+export function isRichTextEmpty(html: string): boolean {
+  return stripHtmlToPlainText(html).length === 0;
+}
+
+/**
+ * Deriva título da pendência a partir do rascunho do calendário.
+ */
+export function titleFromCalendarDraft(draft: CalendarPendencyDraft): string {
+  const plain = stripHtmlToPlainText(draft.description);
+  const firstLine = plain.split("\n")[0]?.trim();
+  if (firstLine) return firstLine.slice(0, 500);
+  const areaLabel = draft.area ? PENDENCY_AREA_LABELS[draft.area] : "Pendência";
+  const audienceLabel = draft.audience
+    ? PENDENCY_AUDIENCE_LABELS[draft.audience]
+    : "";
+  return `${areaLabel}${audienceLabel ? ` — ${audienceLabel}` : ""}`.slice(0, 500);
 }
 
 /**

@@ -8,6 +8,7 @@ import {
 
 import {
   PENDENCY_PROJECT_KEYS,
+  PENDENCY_RECURRENCES,
   PENDENCY_STATUSES,
   PENDENCY_URGENCIES,
 } from "~/shared/pendency";
@@ -73,6 +74,18 @@ const pendencySchema = new Schema(
     attachments: { type: [attachmentSchema], default: [] },
     links: { type: [linkSchema], default: [] },
     checklist: { type: [checklistItemSchema], default: [] },
+    audience: {
+      type: String,
+      enum: ["design", "medical_team"],
+      default: null,
+    },
+    professorResponsible: { type: String, default: null },
+    dueDate: { type: Date, default: null, index: true },
+    recurrence: {
+      type: String,
+      enum: PENDENCY_RECURRENCES,
+      default: "none",
+    },
   },
   { timestamps: true },
 );

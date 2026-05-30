@@ -43,7 +43,7 @@ export function MonthCalendar({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-2xl border-4 border-calendar-cardinal bg-white">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border-4 border-calendar-cardinal bg-white">
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <button
           type="button"

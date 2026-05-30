@@ -18,6 +18,7 @@ type CalendarSidePanelProps = {
   monthGoals: Goal[];
   selectedGoalId: string | null;
   onSelectGoal: (goalId: string | null) => void;
+  onOpenCreatePendency: () => void;
   onCreateGoal: () => void;
   onEditGoal: (goal: Goal) => void;
   onCompleteGoal: (goal: Goal) => void;
@@ -46,6 +47,7 @@ export function CalendarSidePanel({
   monthGoals,
   selectedGoalId,
   onSelectGoal,
+  onOpenCreatePendency,
   onCreateGoal,
   onEditGoal,
   onCompleteGoal,
@@ -166,9 +168,9 @@ export function CalendarSidePanel({
         <div className="mt-3 flex items-center gap-3 border-t border-white/20 pt-3">
           <button
             type="button"
-            onClick={onCreateGoal}
+            onClick={onOpenCreatePendency}
             className="rounded p-1.5 text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            aria-label="Adicionar meta"
+            aria-label="Adicionar pendência"
           >
             <Plus className="h-5 w-5" aria-hidden />
           </button>
@@ -192,10 +194,17 @@ export function CalendarSidePanel({
           </button>
           <button
             type="button"
-            onClick={() => selectedGoal && onEditGoal(selectedGoal)}
-            disabled={!selectedGoal}
-            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            aria-label="Editar meta"
+            onClick={() => {
+              if (selectedGoal) {
+                onEditGoal(selectedGoal);
+              } else {
+                onCreateGoal();
+              }
+            }}
+            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            aria-label={
+              selectedGoal ? "Editar meta selecionada" : "Adicionar meta"
+            }
           >
             <Pencil className="h-5 w-5" aria-hidden />
           </button>

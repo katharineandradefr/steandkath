@@ -34,8 +34,15 @@ type SavedAttachmentInput = {
 /**
  * Extrai o excerto legado da primeira linha do markdown.
  */
-export function excerptFromMarkdown(markdown: string): string | null {
-  const line = markdown.trim().split("\n")[0]?.trim() ?? "";
+export function excerptFromMarkdown(input: string): string | null {
+  const stripped = input
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  const line = stripped.split("\n")[0]?.trim() ?? "";
   return line.length > 0 ? line : null;
 }
 
@@ -75,6 +82,10 @@ export function docToPendency(doc: PendencyDoc): Pendency {
       text: c.text,
       checked: c.checked,
     })),
+    audience: doc.audience ?? null,
+    professorResponsible: doc.professorResponsible ?? null,
+    dueDate: doc.dueDate ? doc.dueDate.toISOString() : null,
+    recurrence: doc.recurrence ?? "none",
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };

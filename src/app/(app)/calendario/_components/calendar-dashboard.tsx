@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { CalendarSidePanel } from "~/app/(app)/calendario/_components/calendar-side-panel";
+import { CreatePendencyModal } from "~/app/(app)/calendario/_components/create-pendency-modal";
 import { GoalFormModal } from "~/app/(app)/calendario/_components/goal-form-modal";
 import { MonthCalendar } from "~/app/(app)/calendario/_components/month-calendar";
 import type { Goal } from "~/shared/goal";
@@ -23,6 +24,7 @@ export function CalendarDashboard({
   const [viewYear, setViewYear] = useState(initialYear);
   const [viewMonth, setViewMonth] = useState(initialMonth);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [isPendencyModalOpen, setIsPendencyModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -82,8 +84,8 @@ export function CalendarDashboard({
 
   return (
     <>
-      <div className="-m-2 flex min-h-[calc(100vh-4rem)] flex-col sm:-m-4 md:-m-6">
-        <div className="flex min-h-0 flex-1 flex-col rounded-2xl border-4 border-calendar-cardinal bg-calendar-ice p-3 sm:p-4">
+      <div className="-m-2 flex h-full flex-1 flex-col sm:-m-4 md:-m-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-4 border-calendar-cardinal bg-calendar-ice p-3 sm:p-4">
           {isError && (
             <p role="alert" className="mb-3 text-sm text-red-600">
               Não foi possível carregar as metas. Tente novamente.
@@ -111,6 +113,7 @@ export function CalendarDashboard({
                   monthGoals={monthGoals}
                   selectedGoalId={selectedGoalId}
                   onSelectGoal={setSelectedGoalId}
+                  onOpenCreatePendency={() => setIsPendencyModalOpen(true)}
                   onCreateGoal={handleCreateGoal}
                   onEditGoal={handleEditGoal}
                   onCompleteGoal={handleCompleteGoal}
@@ -121,6 +124,11 @@ export function CalendarDashboard({
           )}
         </div>
       </div>
+
+      <CreatePendencyModal
+        open={isPendencyModalOpen}
+        onClose={() => setIsPendencyModalOpen(false)}
+      />
 
       <GoalFormModal
         open={modalOpen}

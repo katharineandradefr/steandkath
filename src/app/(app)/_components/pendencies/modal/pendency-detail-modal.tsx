@@ -5,13 +5,14 @@ import { createPortal } from "react-dom";
 
 import {
   createEmptyPendencyDraft,
+  stripHtmlToPlainText,
   type Pendency,
   type PendencyFormValues,
 } from "~/shared/pendency";
 
+import { DescriptionRichEditor } from "~/app/(app)/calendario/_components/description-rich-editor";
 import { ModalAttachments } from "./modal-attachments";
 import { ModalChecklist } from "./modal-checklist";
-import { ModalDescription } from "./modal-description";
 import { ModalLinks } from "./modal-links";
 import { ModalTagsRow } from "./modal-tags-row";
 import { ModalTitleField } from "./modal-title-field";
@@ -88,7 +89,8 @@ export function PendencyDetailModal({
       window.alert("Informe um título para a pendência.");
       return;
     }
-    const excerpt = draft.descriptionMarkdown.trim().split("\n")[0]?.trim() ?? "";
+    const plain = stripHtmlToPlainText(draft.descriptionMarkdown);
+    const excerpt = plain.split("\n")[0]?.trim() ?? "";
     onSave({
       ...draft,
       title,
@@ -144,10 +146,19 @@ export function PendencyDetailModal({
         </header>
 
         <div className="flex-1 space-y-0 overflow-y-auto px-5">
-          <ModalDescription
-            value={draft.descriptionMarkdown}
-            onChange={(descriptionMarkdown) => patch({ descriptionMarkdown })}
-          />
+          <section className="border-t border-sidebar-border pt-5">
+            <div className="mb-3 flex items-center gap-2">
+              <LinesIcon />
+              <h3 className="text-sm font-semibold text-white">Descrição</h3>
+            </div>
+            <DescriptionRichEditor
+              key={draft.id}
+              initialValue={draft.descriptionMarkdown}
+              theme="dark"
+              placeholder="Detalhe a tarefa…"
+              onChange={(descriptionMarkdown) => patch({ descriptionMarkdown })}
+            />
+          </section>
           <ModalAttachments
             attachments={draft.attachments}
             onChange={(attachments) => patch({ attachments })}
@@ -187,5 +198,22 @@ export function PendencyDetailModal({
       </div>
     </div>,
     document.body,
+  );
+}
+
+function LinesIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="text-white/50"
+      aria-hidden
+    >
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
   );
 }

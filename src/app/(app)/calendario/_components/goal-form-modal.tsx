@@ -128,7 +128,7 @@ export function GoalFormModal({
       aria-modal="true"
       aria-labelledby="goal-modal-title"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-gray-900 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="goal-modal-title" className="text-lg font-semibold text-gray-900">
             {mode === "create" ? "Nova meta" : "Editar meta"}
