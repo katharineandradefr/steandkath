@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "~/app/(app)/_components/placeholder-page";
+import { ChatLayout } from "./_components/chat-layout";
 
 export default function ChatPage() {
-  return <PlaceholderPage title="Chat" />;
+  return <ChatLayout />;
 }
