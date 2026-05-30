@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { CalendarSidePanel } from "~/app/(app)/calendario/_components/calendar-side-panel";
 import { CreatePendencyModal } from "~/app/(app)/calendario/_components/create-pendency-modal";
 import { GoalFormModal } from "~/app/(app)/calendario/_components/goal-form-modal";
 import { MonthCalendar } from "~/app/(app)/calendario/_components/month-calendar";
-import type { Goal } from "~/shared/goal";
+import { getUtcTodayStart } from "~/app/(app)/calendario/_utils/calendar-grid";
+import { goalOverlapsRange, type Goal } from "~/shared/goal";
 import { api } from "~/trpc/react";
 
 type CalendarDashboardProps = {
@@ -28,6 +29,15 @@ export function CalendarDashboard({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [goalInitialStartDate, setGoalInitialStartDate] = useState<Date | null>(
+    null,
+  );
+
+  const weekReferenceDate = useMemo(
+    () => selectedDay ?? getUtcTodayStart(),
+    [selectedDay],
+  );
 
   const monthInput = { year: viewYear, month: viewMonth };
   const {
@@ -60,12 +70,32 @@ export function CalendarDashboard({
   const handleCreateGoal = () => {
     setModalMode("create");
     setEditingGoal(null);
+    setGoalInitialStartDate(null);
     setModalOpen(true);
   };
+
+  const handleSelectDay = useCallback(
+    (date: Date) => {
+      setSelectedDay(date);
+      const hasGoalOnDay = monthGoals.some((goal) =>
+        goalOverlapsRange(goal, date, date),
+      );
+      if (hasGoalOnDay) return;
+      const todayUtc = getUtcTodayStart().getTime();
+      if (date.getTime() >= todayUtc) {
+        setModalMode("create");
+        setEditingGoal(null);
+        setGoalInitialStartDate(date);
+        setModalOpen(true);
+      }
+    },
+    [monthGoals],
+  );
 
   const handleEditGoal = (goal: Goal) => {
     setModalMode("edit");
     setEditingGoal(goal);
+    setGoalInitialStartDate(null);
     setModalOpen(true);
   };
 
@@ -103,15 +133,19 @@ export function CalendarDashboard({
                   year={viewYear}
                   month={viewMonth}
                   goals={monthGoals}
+                  selectedDay={selectedDay}
+                  onSelectDay={handleSelectDay}
                   onMonthChange={handleMonthChange}
                 />
               </div>
-              <div className="min-h-[24rem] flex-[3] lg:min-h-0">
+              <div className="min-h-[24rem] min-w-0 flex-[3] lg:min-h-0">
                 <CalendarSidePanel
                   year={viewYear}
                   month={viewMonth}
                   monthGoals={monthGoals}
+                  selectedDay={selectedDay}
                   selectedGoalId={selectedGoalId}
+                  weekReferenceDate={weekReferenceDate}
                   onSelectGoal={setSelectedGoalId}
                   onOpenCreatePendency={() => setIsPendencyModalOpen(true)}
                   onCreateGoal={handleCreateGoal}
@@ -134,6 +168,7 @@ export function CalendarDashboard({
         open={modalOpen}
         mode={modalMode}
         goal={editingGoal}
+        initialStartDate={goalInitialStartDate}
         onClose={() => setModalOpen(false)}
         onSuccess={() => setSelectedGoalId(null)}
       />

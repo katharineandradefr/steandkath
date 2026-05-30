@@ -18,6 +18,7 @@ import {
   filterPendenciesByUrgency,
   groupPendenciesByStatus,
   PENDENCY_STATUSES,
+  stripHtmlToPlainText,
   type Pendency,
   type PendencyFormValues,
   type PendencyUrgency,
@@ -111,7 +112,8 @@ export function PendencyBoard() {
           if (p.id !== id) return p;
           const descriptionMarkdown =
             patch.descriptionMarkdown ?? p.descriptionMarkdown;
-          const excerpt = descriptionMarkdown.trim().split("\n")[0]?.trim() ?? "";
+          const plain = stripHtmlToPlainText(descriptionMarkdown);
+          const excerpt = plain.split("\n")[0]?.trim() ?? "";
           return {
             ...p,
             title: patch.title ?? p.title,

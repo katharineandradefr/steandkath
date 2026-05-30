@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Minus, Pencil, Plus } from "lucide-react";
 
 import { GoalCard } from "~/app/(app)/calendario/_components/goal-card";
-import { filterGoalsByProject, type Goal } from "~/shared/goal";
+import {
+  filterGoalsByProject,
+  goalsOverlappingRange,
+  type Goal,
+} from "~/shared/goal";
 import {
   PENDENCY_PROJECT_KEYS,
   PENDENCY_PROJECT_LABELS,
@@ -16,7 +20,9 @@ type CalendarSidePanelProps = {
   year: number;
   month: number;
   monthGoals: Goal[];
+  selectedDay: Date | null;
   selectedGoalId: string | null;
+  weekReferenceDate: Date;
   onSelectGoal: (goalId: string | null) => void;
   onOpenCreatePendency: () => void;
   onCreateGoal: () => void;
@@ -24,6 +30,17 @@ type CalendarSidePanelProps = {
   onCompleteGoal: (goal: Goal) => void;
   onDeleteGoal: (goal: Goal) => void;
 };
+
+type ViewMode = "project" | "day";
+
+/**
+ * Formata a data selecionada para a pílula DD/MM.
+ */
+function formatDayPillLabel(date: Date): string {
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}`;
+}
 
 /**
  * Ilustração minimalista de cubos empilhados para estado vazio.
@@ -42,10 +59,12 @@ function StackedCubesIllustration() {
  * Painel lateral direito: essa semana, abas de projeto e lista de metas.
  */
 export function CalendarSidePanel({
-  year,
-  month,
+  year: _year,
+  month: _month,
   monthGoals,
+  selectedDay,
   selectedGoalId,
+  weekReferenceDate,
   onSelectGoal,
   onOpenCreatePendency,
   onCreateGoal,
@@ -53,39 +72,68 @@ export function CalendarSidePanel({
   onCompleteGoal,
   onDeleteGoal,
 }: CalendarSidePanelProps) {
-  const referenceDate = new Date(Date.UTC(year, month - 1, 15));
   const { data: weekGoals = [], isLoading: weekLoading } =
-    api.goal.listByWeek.useQuery({ referenceDate });
+    api.goal.listByWeek.useQuery({ referenceDate: weekReferenceDate });
 
   const [activeProject, setActiveProject] =
-    useState<PendencyProjectKey>("extensivo_27");
+    useState<PendencyProjectKey>("extensivo");
+  const [viewMode, setViewMode] = useState<ViewMode>("project");
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const createMenuRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  const dayGoals = useMemo(() => {
+    if (!selectedDay) return [];
+    return goalsOverlappingRange(monthGoals, selectedDay, selectedDay);
+  }, [monthGoals, selectedDay]);
+
+  useEffect(() => {
+    if (selectedDay && dayGoals.length > 0) {
+      setViewMode("day");
+    } else {
+      setViewMode("project");
+    }
+  }, [selectedDay, dayGoals.length]);
+
+  useEffect(() => {
+    if (!createMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (!createMenuRef.current?.contains(e.target as Node)) {
+        setCreateMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCreateMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [createMenuOpen]);
 
   const filteredGoals = filterGoalsByProject(monthGoals, activeProject);
+  const displayedGoals = viewMode === "day" ? dayGoals : filteredGoals;
   const selectedGoal =
-    filteredGoals.find((g) => g.id === selectedGoalId) ??
+    displayedGoals.find((g) => g.id === selectedGoalId) ??
     monthGoals.find((g) => g.id === selectedGoalId) ??
     null;
 
-  const projectIndex = PENDENCY_PROJECT_KEYS.indexOf(activeProject);
-
-  const handlePrevTab = () => {
-    const prevIndex =
-      projectIndex <= 0
-        ? PENDENCY_PROJECT_KEYS.length - 1
-        : projectIndex - 1;
-    setActiveProject(PENDENCY_PROJECT_KEYS[prevIndex]!);
+  const handleSelectProject = (key: PendencyProjectKey) => {
+    setViewMode("project");
+    setActiveProject(key);
   };
 
-  const handleNextTab = () => {
-    const nextIndex =
-      projectIndex >= PENDENCY_PROJECT_KEYS.length - 1
-        ? 0
-        : projectIndex + 1;
-    setActiveProject(PENDENCY_PROJECT_KEYS[nextIndex]!);
+  const scrollByViewport = (direction: "left" | "right") => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const delta = el.clientWidth * 0.8 * (direction === "left" ? -1 : 1);
+    el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
       <section>
         <p className="mb-3 text-sm text-calendar-muted">Essa Semana:</p>
         {weekLoading ? (
@@ -112,49 +160,73 @@ export function CalendarSidePanel({
         )}
       </section>
 
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
         <button
           type="button"
-          onClick={handlePrevTab}
+          onClick={() => scrollByViewport("left")}
           className="rounded p-1 text-calendar-muted hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-          aria-label="Projeto anterior"
+          aria-label="Rolar projetos para a esquerda"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
-        <div className="flex flex-1 gap-1">
-          {PENDENCY_PROJECT_KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveProject(key)}
-              className={`flex-1 rounded-full px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
-                activeProject === key
-                  ? "bg-calendar-cardinal text-white"
-                  : "bg-gray-200 text-gray-800"
-              }`}
-            >
-              {PENDENCY_PROJECT_LABELS[key]}
-            </button>
-          ))}
+        <div
+          ref={scrollerRef}
+          className="no-scrollbar min-w-0 flex-1 overflow-x-auto"
+        >
+          <div className="flex w-max flex-nowrap gap-1.5">
+            {PENDENCY_PROJECT_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelectProject(key)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+                  viewMode === "project" && activeProject === key
+                    ? "bg-calendar-cardinal text-white"
+                    : "bg-gray-200 text-gray-800"
+                }`}
+              >
+                {PENDENCY_PROJECT_LABELS[key]}
+              </button>
+            ))}
+            {selectedDay && dayGoals.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setViewMode("day")}
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+                  viewMode === "day"
+                    ? "bg-calendar-cardinal text-white"
+                    : "bg-gray-200 text-gray-800"
+                }`}
+                aria-label={`Metas do dia ${formatDayPillLabel(selectedDay)}`}
+              >
+                {formatDayPillLabel(selectedDay)}
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"
-          onClick={handleNextTab}
+          onClick={() => scrollByViewport("right")}
           className="rounded p-1 text-calendar-muted hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-          aria-label="Próximo projeto"
+          aria-label="Rolar projetos para a direita"
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-xl bg-calendar-bordeaux p-3">
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
-          {filteredGoals.length === 0 ? (
+      <div
+        className="flex min-h-0 flex-1 flex-col rounded-xl bg-calendar-bordeaux p-3"
+        onMouseLeave={() => onSelectGoal(null)}
+      >
+        <div className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto">
+          {displayedGoals.length === 0 ? (
             <p className="py-6 text-center text-sm text-white/60">
-              Nenhuma meta neste projeto.
+              {viewMode === "day"
+                ? "Nenhuma meta neste dia."
+                : "Nenhuma meta neste projeto."}
             </p>
           ) : (
-            filteredGoals.map((goal) => (
+            displayedGoals.map((goal) => (
               <GoalCard
                 key={goal.id}
                 goal={goal}
@@ -166,19 +238,52 @@ export function CalendarSidePanel({
         </div>
 
         <div className="mt-3 flex items-center gap-3 border-t border-white/20 pt-3">
-          <button
-            type="button"
-            onClick={onOpenCreatePendency}
-            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            aria-label="Adicionar pendência"
-          >
-            <Plus className="h-5 w-5" aria-hidden />
-          </button>
+          <div ref={createMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setCreateMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={createMenuOpen}
+              aria-label="Adicionar"
+              className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <Plus className="h-5 w-5" aria-hidden />
+            </button>
+            {createMenuOpen && (
+              <div
+                role="menu"
+                className="absolute bottom-full left-0 mb-2 min-w-[140px] overflow-hidden rounded-lg border border-white/15 bg-white text-sm text-gray-900 shadow-lg"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setCreateMenuOpen(false);
+                    onCreateGoal();
+                  }}
+                  className="block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                >
+                  Meta
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setCreateMenuOpen(false);
+                    onOpenCreatePendency();
+                  }}
+                  className="block w-full border-t border-gray-100 px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                >
+                  Pendência
+                </button>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => selectedGoal && onCompleteGoal(selectedGoal)}
             disabled={!selectedGoal}
-            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label="Marcar meta como concluída"
           >
             <Check className="h-5 w-5" aria-hidden />
@@ -187,7 +292,7 @@ export function CalendarSidePanel({
             type="button"
             onClick={() => selectedGoal && onDeleteGoal(selectedGoal)}
             disabled={!selectedGoal}
-            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label="Excluir meta"
           >
             <Minus className="h-5 w-5" aria-hidden />
@@ -201,7 +306,7 @@ export function CalendarSidePanel({
                 onCreateGoal();
               }
             }}
-            className="rounded p-1.5 text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             aria-label={
               selectedGoal ? "Editar meta selecionada" : "Adicionar meta"
             }

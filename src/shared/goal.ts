@@ -155,7 +155,7 @@ export function createEmptyGoalDraft(
     id: crypto.randomUUID(),
     areaKey: DEFAULT_AREA_KEY,
     title: "",
-    projectKey: "extensivo_27",
+    projectKey: "extensivo",
     status: "pending",
     startDate: today,
     dueDate: today,

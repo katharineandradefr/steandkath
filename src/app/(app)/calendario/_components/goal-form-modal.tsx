@@ -21,6 +21,7 @@ type GoalFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   goal: Goal | null;
+  initialStartDate?: Date | null;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -46,6 +47,13 @@ function toInputDate(iso: string): string {
   return `${y}-${m}-${d}`;
 }
 
+function toInputDateFromUtcDate(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 /**
  * Modal de criação/edição de meta.
  */
@@ -53,20 +61,28 @@ export function GoalFormModal({
   open,
   mode,
   goal,
+  initialStartDate = null,
   onClose,
   onSuccess,
 }: GoalFormModalProps) {
-  const [form, setForm] = useState<FormState>(() => buildFormFromGoal(null));
+  const [form, setForm] = useState<FormState>(() =>
+    buildFormFromGoal(null, null),
+  );
   const [error, setError] = useState<string | null>(null);
 
   const utils = api.useUtils();
 
   useEffect(() => {
     if (open) {
-      setForm(buildFormFromGoal(goal));
+      setForm(
+        buildFormFromGoal(
+          goal,
+          mode === "create" ? initialStartDate : null,
+        ),
+      );
       setError(null);
     }
-  }, [open, goal]);
+  }, [open, goal, mode, initialStartDate]);
 
   const createMutation = api.goal.create.useMutation({
     onSuccess: async () => {
@@ -299,14 +315,21 @@ export function GoalFormModal({
   );
 }
 
-function buildFormFromGoal(goal: Goal | null): FormState {
+function buildFormFromGoal(
+  goal: Goal | null,
+  initialStartDate?: Date | null,
+): FormState {
   const draft = createEmptyGoalDraft(goal ?? undefined);
+  const dateInput = initialStartDate
+    ? toInputDateFromUtcDate(initialStartDate)
+    : toInputDate(draft.startDate);
+
   return {
     title: draft.title,
     projectKey: draft.projectKey,
     status: draft.status,
-    startDate: toInputDate(draft.startDate),
-    dueDate: toInputDate(draft.dueDate),
+    startDate: dateInput,
+    dueDate: initialStartDate ? dateInput : toInputDate(draft.dueDate),
     assigneeName: draft.assigneeName ?? "",
     assigneeAvatarUrl: draft.assigneeAvatarUrl ?? "",
   };

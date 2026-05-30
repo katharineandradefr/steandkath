@@ -11,7 +11,7 @@ const SEED_GOALS = [
   {
     id: "a1000000-0000-4000-8000-000000000001",
     title: "Extensivo Rev 2",
-    projectKey: "extensivo_27" as const,
+    projectKey: "extensivo" as const,
     status: "in_progress" as const,
     startDate: new Date(Date.UTC(2026, 4, 22)),
     dueDate: new Date(Date.UTC(2026, 4, 25)),
@@ -19,7 +19,7 @@ const SEED_GOALS = [
   {
     id: "a1000000-0000-4000-8000-000000000002",
     title: "Revalida Livro Físico",
-    projectKey: "usa_fichas" as const,
+    projectKey: "usa" as const,
     status: "pending" as const,
     startDate: new Date(Date.UTC(2026, 4, 20)),
     dueDate: new Date(Date.UTC(2026, 4, 25)),
@@ -27,7 +27,7 @@ const SEED_GOALS = [
   {
     id: "a1000000-0000-4000-8000-000000000003",
     title: "Rádio Rev 3",
-    projectKey: "internato" as const,
+    projectKey: "radio" as const,
     status: "pending" as const,
     startDate: new Date(Date.UTC(2026, 4, 24)),
     dueDate: new Date(Date.UTC(2026, 4, 25)),

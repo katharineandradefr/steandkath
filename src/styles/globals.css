@@ -29,3 +29,12 @@
   --sidebar-width-collapsed: 4.5rem;
   --sidebar-width-expanded: 13.75rem;
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

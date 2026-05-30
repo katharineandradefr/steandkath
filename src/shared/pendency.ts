@@ -8,9 +8,15 @@ export type PendencyStatus = "pending" | "in_review" | "fixed";
 export type PendencyUrgency = "low" | "medium" | "high";
 
 export type PendencyProjectKey =
-  | "extensivo_27"
+  | "extensivo"
+  | "extensivo_performance"
   | "internato"
-  | "usa_fichas";
+  | "medical_life_hacks_ps"
+  | "radio"
+  | "revalida"
+  | "usa"
+  | "clinicof"
+  | "concursus";
 
 export type PendencyAreaKey = "go" | "ped" | "prev" | "cir" | "cm";
 
@@ -110,9 +116,15 @@ export const PENDENCY_URGENCIES: readonly PendencyUrgency[] = [
 ] as const;
 
 export const PENDENCY_PROJECT_KEYS: readonly PendencyProjectKey[] = [
-  "extensivo_27",
+  "extensivo",
+  "extensivo_performance",
   "internato",
-  "usa_fichas",
+  "medical_life_hacks_ps",
+  "radio",
+  "revalida",
+  "usa",
+  "clinicof",
+  "concursus",
 ] as const;
 
 export const PENDENCY_AREA_KEYS: readonly PendencyAreaKey[] = [
@@ -182,26 +194,56 @@ export const PENDENCY_URGENCY_LABELS: Record<PendencyUrgency, string> = {
 };
 
 export const PENDENCY_PROJECT_LABELS: Record<PendencyProjectKey, string> = {
-  extensivo_27: "Extensivo 27",
+  extensivo: "Extensivo",
+  extensivo_performance: "Extensivo performance",
   internato: "Internato",
-  usa_fichas: "USA Fichas",
+  medical_life_hacks_ps: "Medical Life Hacks - PS",
+  radio: "Rádio",
+  revalida: "Revalida",
+  usa: "USA",
+  clinicof: "Clinicof",
+  concursus: "ConcurSUS",
 };
 
 export const PENDENCY_PROJECT_STYLES: Record<
   PendencyProjectKey,
   { badgeOnLight: string; badgeOnDark: string }
 > = {
-  extensivo_27: {
+  extensivo: {
     badgeOnLight: "bg-violet-100 text-violet-700 border-violet-200",
     badgeOnDark: "bg-violet-500/25 text-violet-200 border-violet-400/40",
+  },
+  extensivo_performance: {
+    badgeOnLight: "bg-purple-100 text-purple-700 border-purple-200",
+    badgeOnDark: "bg-purple-500/25 text-purple-200 border-purple-400/40",
   },
   internato: {
     badgeOnLight: "bg-sky-100 text-sky-700 border-sky-200",
     badgeOnDark: "bg-sky-500/20 text-sky-200 border-sky-400/35",
   },
-  usa_fichas: {
+  medical_life_hacks_ps: {
+    badgeOnLight: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    badgeOnDark: "bg-emerald-500/20 text-emerald-200 border-emerald-400/35",
+  },
+  radio: {
+    badgeOnLight: "bg-amber-100 text-amber-700 border-amber-200",
+    badgeOnDark: "bg-amber-500/20 text-amber-200 border-amber-400/35",
+  },
+  revalida: {
+    badgeOnLight: "bg-rose-100 text-rose-700 border-rose-200",
+    badgeOnDark: "bg-rose-500/20 text-rose-200 border-rose-400/35",
+  },
+  usa: {
     badgeOnLight: "bg-pink-100 text-pink-700 border-pink-200",
     badgeOnDark: "bg-pink-500/20 text-pink-200 border-pink-400/35",
+  },
+  clinicof: {
+    badgeOnLight: "bg-cyan-100 text-cyan-700 border-cyan-200",
+    badgeOnDark: "bg-cyan-500/20 text-cyan-200 border-cyan-400/35",
+  },
+  concursus: {
+    badgeOnLight: "bg-orange-100 text-orange-700 border-orange-200",
+    badgeOnDark: "bg-orange-500/20 text-orange-200 border-orange-400/35",
   },
 };
 
@@ -212,7 +254,7 @@ export const CALENDAR_DEFAULT_AREA_KEY: PendencyAreaKey = "cm";
 
 export const DEFAULT_AREA_TITLE = "Clínica Médica";
 
-export const DEFAULT_PROJECT_KEY: PendencyProjectKey = "extensivo_27";
+export const DEFAULT_PROJECT_KEY: PendencyProjectKey = "extensivo";
 
 /** Classes Tailwind para badges de urgência (fundo claro vs. modal escuro). */
 export const PENDENCY_URGENCY_STYLES: Record<
@@ -335,8 +377,8 @@ export function titleFromCalendarDraft(draft: CalendarPendencyDraft): string {
  * Texto curto para exibição no card do Kanban.
  */
 export function getPendencyCardExcerpt(pendency: Pendency): string | null {
-  const md = pendency.descriptionMarkdown.trim();
-  if (md) return md.split("\n")[0] ?? null;
+  const plain = stripHtmlToPlainText(pendency.descriptionMarkdown);
+  if (plain) return plain.split("\n")[0] ?? null;
   return pendency.description?.trim() ?? null;
 }
 

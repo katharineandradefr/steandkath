@@ -22,9 +22,11 @@ export function GoalCard({ goal, selected = false, onSelect }: GoalCardProps) {
     <button
       type="button"
       onClick={onSelect}
-      className={`flex w-full items-center gap-3 rounded-lg border-l-4 border-calendar-cardinal bg-white p-3 text-left transition-shadow ${
-        selected ? "ring-2 ring-calendar-cardinal/40" : ""
-      } hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal`}
+      className={`flex w-full items-center gap-3 rounded-lg border-l-4 border-calendar-cardinal p-3 text-left transition-all duration-200 ease-out hover:scale-[1.02] hover:bg-calendar-ice hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+        selected
+          ? "bg-gray-200 ring-2 ring-calendar-cardinal/60 shadow-md"
+          : "bg-white"
+      }`}
       aria-pressed={selected}
     >
       <div className="min-w-0 flex-1">

@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "~/app/(app)/_components/placeholder-page";
+import { ProfileForm } from "~/app/(app)/perfil/_components/profile-form";
 
 export default function PerfilPage() {
-  return <PlaceholderPage title="Perfil" />;
+  return <ProfileForm />;
 }

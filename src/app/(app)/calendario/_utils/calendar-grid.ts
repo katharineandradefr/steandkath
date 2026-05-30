@@ -52,6 +52,17 @@ export function isWeekendDay(dayIndex: number): boolean {
 }
 
 /**
+ * Verifica se duas datas UTC representam o mesmo dia.
+ */
+export function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+/**
  * Normaliza data para meia-noite UTC.
  */
 function toUtcDate(year: number, month: number, day: number): Date {
@@ -59,14 +70,11 @@ function toUtcDate(year: number, month: number, day: number): Date {
 }
 
 /**
- * Verifica se duas datas UTC representam o mesmo dia.
+ * Retorna meia-noite UTC do dia atual (fuso local do cliente).
  */
-function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
+export function getUtcTodayStart(): Date {
+  const today = new Date();
+  return toUtcDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
 }
 
 /**
