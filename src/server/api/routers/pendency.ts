@@ -12,11 +12,15 @@ import {
 import { PendencyModel } from "~/server/db/models/pendency";
 import {
   DEFAULT_AREA_KEY,
+  PENDENCY_AUDIENCES,
   PENDENCY_PROJECT_KEYS,
+  PENDENCY_RECURRENCES,
   PENDENCY_STATUSES,
   PENDENCY_URGENCIES,
   type PendencyAttachment,
+  type PendencyAudience,
   type PendencyProjectKey,
+  type PendencyRecurrence,
   type PendencyStatus,
   type PendencyUrgency,
 } from "~/shared/pendency";
@@ -29,6 +33,17 @@ const urgencySchema = z.enum(
 );
 const statusSchema = z.enum(
   PENDENCY_STATUSES as unknown as [PendencyStatus, ...PendencyStatus[]],
+);
+
+const audienceSchema = z.enum(
+  PENDENCY_AUDIENCES as unknown as [PendencyAudience, ...PendencyAudience[]],
+);
+
+const recurrenceSchema = z.enum(
+  PENDENCY_RECURRENCES as unknown as [
+    PendencyRecurrence,
+    ...PendencyRecurrence[],
+  ],
 );
 
 const pendingAttachmentSchema = z.object({
@@ -79,7 +94,20 @@ const pendencyWriteFieldsSchema = z.object({
   links: z.array(linkSchema).max(20).default([]),
   checklist: z.array(checklistItemSchema).max(50).default([]),
   attachments: z.array(attachmentDraftSchema).max(8).default([]),
+  audience: audienceSchema.nullable().optional(),
+  professorResponsible: z.string().max(200).nullable().optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  recurrence: recurrenceSchema.default("none"),
 });
+
+/**
+ * Normaliza data para meia-noite UTC.
+ */
+function normalizeDueDate(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
 
 export const pendencyRouter = createTRPCRouter({
   list: publicProcedure
@@ -94,6 +122,30 @@ export const pendencyRouter = createTRPCRouter({
       const filter = input?.areaKey ? { areaKey: input.areaKey } : {};
       const docs = await PendencyModel.find(filter)
         .sort({ status: 1, position: 1 })
+        .exec();
+      return docs.map(docToPendency);
+    }),
+
+  listByDueDateRange: publicProcedure
+    .input(
+      z.object({
+        start: z.coerce.date(),
+        end: z.coerce.date(),
+        areaKey: z.string().min(1).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const start = normalizeDueDate(input.start);
+      const end = normalizeDueDate(input.end);
+      end.setUTCHours(23, 59, 59, 999);
+
+      const filter: Record<string, unknown> = {
+        dueDate: { $gte: start, $lte: end },
+      };
+      if (input.areaKey) filter.areaKey = input.areaKey;
+
+      const docs = await PendencyModel.find(filter)
+        .sort({ dueDate: 1 })
         .exec();
       return docs.map(docToPendency);
     }),
@@ -120,6 +172,10 @@ export const pendencyRouter = createTRPCRouter({
         attachments,
         links: input.links,
         checklist: input.checklist,
+        audience: input.audience ?? null,
+        professorResponsible: input.professorResponsible ?? null,
+        dueDate: input.dueDate ? normalizeDueDate(input.dueDate) : null,
+        recurrence: input.recurrence ?? "none",
       });
 
       return docToPendency(doc);
@@ -174,6 +230,14 @@ export const pendencyRouter = createTRPCRouter({
       if (patch.links !== undefined) existing.set("links", patch.links);
       if (patch.checklist !== undefined) existing.set("checklist", patch.checklist);
       if (patch.attachments !== undefined) existing.set("attachments", nextAttachments);
+      if (patch.audience !== undefined) existing.audience = patch.audience;
+      if (patch.professorResponsible !== undefined) {
+        existing.professorResponsible = patch.professorResponsible;
+      }
+      if (patch.dueDate !== undefined) {
+        existing.dueDate = patch.dueDate ? normalizeDueDate(patch.dueDate) : null;
+      }
+      if (patch.recurrence !== undefined) existing.recurrence = patch.recurrence;
 
       await existing.save();
       return docToPendency(existing);

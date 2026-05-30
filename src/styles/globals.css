@@ -21,6 +21,11 @@
   --color-sidebar-item-hover: #8f0411;
   --color-sidebar-icon-active: #ffffff;
 
+  --color-calendar-bordeaux: #4a0e0e;
+  --color-calendar-cardinal: #e2263c;
+  --color-calendar-ice: #ededed;
+  --color-calendar-muted: #9ca3af;
+
   --sidebar-width-collapsed: 4.5rem;
   --sidebar-width-expanded: 13.75rem;
 }
