@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { api } from "~/trpc/react";
-import type { Message, SubPanel } from "./chat-types";
+import type { Conversation, Message, SubPanel } from "./chat-types";
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
 import { ConversationList } from "./conversation-list";
 import { ChatArea } from "./chat-area";
@@ -23,6 +23,7 @@ export type SavedMessage = {
  * Usa posicionamento fixed para garantir que apenas as mensagens rolem internamente.
  */
 export function ChatLayout() {
+  const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
   const [activeConversationId, setActiveConversationId] = useState("4");
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
@@ -32,16 +33,18 @@ export function ChatLayout() {
   const [isReplying, setIsReplying] = useState(false);
 
   const activeConversation =
-    CONVERSATIONS.find((c) => c.id === activeConversationId) ?? CONVERSATIONS[0]!;
+    conversations.find((c) => c.id === activeConversationId) ?? conversations[0]!;
 
   const replyMutation = api.chat.reply.useMutation();
 
-  async function handleSendMessage(text: string) {
-    const now = new Date().toLocaleTimeString("pt-BR", {
+  function now() {
+    return new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
 
+  async function handleSendMessage(text: string) {
     setMessages((prev) => [
       ...prev,
       {
@@ -49,7 +52,7 @@ export function ChatLayout() {
         text,
         sender: "me",
         senderName: "Katharine Andrade",
-        timestamp: now,
+        timestamp: now(),
       },
     ]);
 
@@ -64,10 +67,6 @@ export function ChatLayout() {
         })),
       });
 
-      const replyTime = new Date().toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
       setMessages((prev) => [
         ...prev,
         {
@@ -75,7 +74,7 @@ export function ChatLayout() {
           text: result.text,
           sender: "other",
           senderName: activeConversation.name,
-          timestamp: replyTime,
+          timestamp: now(),
         },
       ]);
     } finally {
@@ -83,8 +82,22 @@ export function ChatLayout() {
     }
   }
 
+  function handleSendImage(dataUrl: string) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}`,
+        text: "",
+        imageUrl: dataUrl,
+        sender: "me",
+        senderName: "Katharine Andrade",
+        timestamp: now(),
+      },
+    ]);
+  }
+
   function handleFavoriteMessage(message: Message) {
-    const conv = CONVERSATIONS.find((c) => c.id === activeConversationId);
+    const conv = conversations.find((c) => c.id === activeConversationId);
     const entry: SavedMessage = {
       id: message.id,
       senderName: message.senderName,
@@ -95,7 +108,7 @@ export function ChatLayout() {
           .slice(0, 2)
           .map((w) => w[0])
           .join("") ?? "?",
-      preview: message.text.slice(0, 60),
+      preview: message.imageUrl ? "📷 Imagem" : message.text.slice(0, 60),
     };
     setSavedMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
@@ -117,6 +130,36 @@ export function ChatLayout() {
     setRightPanelOpen(false);
   }
 
+  function handleCreateGroup(name: string, memberIds: string[]) {
+    const initials = name
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("");
+
+    const COLORS = ["#7c3aed", "#0891b2", "#16a34a", "#d97706", "#be185d"];
+    const avatarColor = COLORS[memberIds.length % COLORS.length] ?? "#7c3aed";
+
+    const memberNames = memberIds
+      .map((id) => conversations.find((c) => c.id === id)?.name.split(" ")[0] ?? "")
+      .filter(Boolean)
+      .join(", ");
+
+    const newGroup: Conversation = {
+      id: `group-${Date.now()}`,
+      name,
+      initials,
+      avatarColor,
+      preview: `${memberIds.length} participantes — ${memberNames}`,
+      online: false,
+      isGroup: true,
+    };
+
+    setConversations((prev) => [newGroup, ...prev]);
+    setActiveConversationId(newGroup.id);
+    setMessages([]);
+  }
+
   return (
     /* Posicionamento fixed para ocupar toda a altura disponível sem fazer a página rolar */
     <div
@@ -124,7 +167,7 @@ export function ChatLayout() {
       style={{ left: "var(--sidebar-width)", right: 0 }}
     >
       <ConversationList
-        conversations={CONVERSATIONS}
+        conversations={conversations}
         activeId={activeConversationId}
         onSelect={setActiveConversationId}
       />
@@ -136,6 +179,7 @@ export function ChatLayout() {
         isReplying={isReplying}
         onToggleRightPanel={handleToggleRightPanel}
         onSendMessage={handleSendMessage}
+        onSendImage={handleSendImage}
         onFavoriteMessage={handleFavoriteMessage}
       />
       <OptionsPanel
@@ -144,6 +188,7 @@ export function ChatLayout() {
         savedMessages={savedMessages}
         onSubPanelChange={setActiveSubPanel}
         onSelectConversation={handleSelectConversationFromList}
+        onCreateGroup={handleCreateGroup}
       />
     </div>
   );

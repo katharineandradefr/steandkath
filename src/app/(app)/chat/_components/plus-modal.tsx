@@ -5,16 +5,30 @@ import { ImageIcon, FileDown } from "lucide-react";
 
 type Props = {
   open: boolean;
+  onImageSelect: (dataUrl: string) => void;
 };
 
 /**
  * Mini-modal que abre ao clicar em "+" na barra de mensagem.
  * Fecha automaticamente via onMouseLeave no container pai.
- * Cada opção dispara um <input type="file"> oculto.
+ * Ao selecionar uma imagem, converte para data URL e chama onImageSelect.
  */
-export function PlusModal({ open }: Props) {
+export function PlusModal({ open, onImageSelect }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        onImageSelect(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
 
   return (
     <div
@@ -30,11 +44,7 @@ export function PlusModal({ open }: Props) {
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) console.log("Imagem selecionada:", file.name);
-          e.target.value = "";
-        }}
+        onChange={handleImageChange}
       />
 
       {/* Input oculto para arquivos genéricos */}

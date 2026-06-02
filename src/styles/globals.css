@@ -16,10 +16,10 @@
   --color-sidebar-border: color-mix(in oklab, #e2263c 22%, transparent);
 
   --color-sidebar-panel: #be1525;
-  --color-sidebar-icon: #f1f1f1;
-  --color-sidebar-icon-hover: #ffffff;
-  --color-sidebar-item-hover: #8f0411;
-  --color-sidebar-icon-active: #ffffff;
+  --color-sidebar-icon: #5B0A0A;
+  --color-sidebar-icon-hover: #5B0A0A;
+  --color-sidebar-item-hover: #A72525;
+  --color-sidebar-icon-active: #5B0A0A;
 
   --color-calendar-bordeaux: #4a0e0e;
   --color-calendar-cardinal: #e2263c;

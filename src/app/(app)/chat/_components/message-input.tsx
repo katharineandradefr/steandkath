@@ -7,12 +7,14 @@ import { PlusModal } from "./plus-modal";
 
 type Props = {
   onSend: (text: string) => void;
+  onSendImage: (dataUrl: string) => void;
 };
 
 /**
  * Barra de entrada de mensagem com botão "+" (PlusModal) e envio por Enter ou botão.
+ * Ao selecionar imagem via PlusModal, dispara onSendImage imediatamente.
  */
-export function MessageInput({ onSend }: Props) {
+export function MessageInput({ onSend, onSendImage }: Props) {
   const [text, setText] = useState("");
   const [plusOpen, setPlusOpen] = useState(false);
   const plusContainerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +33,11 @@ export function MessageInput({ onSend }: Props) {
     }
   }
 
+  function handleImageSelect(dataUrl: string) {
+    setPlusOpen(false);
+    onSendImage(dataUrl);
+  }
+
   return (
     <div className="relative p-3">
       {/* Plus modal — fecha no mouseLeave do container */}
@@ -39,7 +46,7 @@ export function MessageInput({ onSend }: Props) {
         className="absolute bottom-full left-6 mb-1"
         onMouseLeave={() => setPlusOpen(false)}
       >
-        <PlusModal open={plusOpen} />
+        <PlusModal open={plusOpen} onImageSelect={handleImageSelect} />
       </div>
 
       <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">

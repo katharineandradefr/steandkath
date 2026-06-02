@@ -9,6 +9,7 @@ export const CONVERSATIONS: Conversation[] = [
     preview: "Helloo...",
     unreadCount: 1,
     online: true,
+    conversationStatus: "em-atendimento",
   },
   {
     id: "2",
@@ -25,6 +26,7 @@ export const CONVERSATIONS: Conversation[] = [
     avatarColor: "#0891b2",
     preview: "Helloo...",
     online: true,
+    conversationStatus: "em-atendimento",
   },
   {
     id: "4",
@@ -42,6 +44,7 @@ export const CONVERSATIONS: Conversation[] = [
     preview: "Helloo...",
     unreadCount: 3,
     online: false,
+    conversationStatus: "em-atendimento",
   },
   {
     id: "6",

@@ -6,11 +6,16 @@ export type Conversation = {
   preview: string;
   unreadCount?: number;
   online: boolean;
+  isGroup?: boolean;
+  /** Status do atendimento desta conversa */
+  conversationStatus?: "em-atendimento" | "sem-atendimento" | "finalizado";
 };
 
 export type Message = {
   id: string;
   text: string;
+  /** Data URL de imagem enviada como anexo */
+  imageUrl?: string;
   sender: "me" | "other";
   senderName: string;
   timestamp: string;

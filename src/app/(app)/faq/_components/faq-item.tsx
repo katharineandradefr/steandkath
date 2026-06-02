@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Pencil, Plus } from "lucide-react";
+import { ChevronDown, Pencil } from "lucide-react";
 
 export type FaqEntry = {
   id: string;
@@ -17,49 +17,39 @@ type Props = {
 
 /**
  * Item individual de FAQ no formato acordeão.
- * Exibe ícone de lápis para edição quando expandido.
+ * Toggle via chevron rotativo. Borda esquerda grossa vinho.
+ * Exibe ícone de lápis quando expandido.
  */
 export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
   return (
     <div
-      className={`relative rounded-xl bg-white shadow-sm transition-shadow ${
-        isExpanded ? "shadow-md" : ""
+      className={`overflow-hidden rounded-xl border-l-4 border-[#5B0A0A] bg-white transition-shadow ${
+        isExpanded ? "shadow-md" : "shadow-sm"
       }`}
     >
-      {/* Borda esquerda vermelha */}
-      <div className="absolute top-0 left-0 bottom-0 w-1 rounded-l-xl bg-[#be1525]" />
-
-      <div className="flex items-start gap-4 pl-5 pr-4 py-4">
-        <p
-          className={`flex-1 text-sm font-medium text-gray-800 ${
-            isExpanded ? "pt-0.5" : ""
-          }`}
-        >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-4 px-5 py-4 text-left"
+        aria-expanded={isExpanded}
+      >
+        <p className="flex-1 text-sm font-medium text-gray-800">
           {entry.question}
         </p>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-[#5B0A0A] transition-transform duration-300 ${
+            isExpanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
 
-        {/* Botão toggle (+/-) */}
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#be1525] text-white transition-opacity hover:opacity-80"
-          aria-label={isExpanded ? "Recolher" : "Expandir"}
-        >
-          {isExpanded ? (
-            <Minus className="h-3.5 w-3.5" />
-          ) : (
-            <Plus className="h-3.5 w-3.5" />
-          )}
-        </button>
-      </div>
-
-      {/* Conteúdo expandido */}
+      {/* Conteúdo expandido com animação */}
       <div
         className={`overflow-hidden transition-all duration-300 ${
           isExpanded ? "max-h-96" : "max-h-0"
         }`}
       >
-        <div className="relative pl-5 pr-4 pb-4">
+        <div className="relative px-5 pb-5">
           <p className="text-sm leading-relaxed text-gray-600">{entry.answer}</p>
 
           {/* Ícone de lápis — editar */}
@@ -69,7 +59,7 @@ export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
               e.stopPropagation();
               onEditClick();
             }}
-            className="absolute right-4 bottom-4 text-gray-400 transition-colors hover:text-[#5B0A0A]"
+            className="absolute right-4 bottom-2 text-gray-400 transition-colors hover:text-[#5B0A0A]"
             aria-label="Editar pergunta"
           >
             <Pencil className="h-3.5 w-3.5" />

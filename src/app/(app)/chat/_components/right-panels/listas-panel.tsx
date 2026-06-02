@@ -84,6 +84,7 @@ export function ListasPanel({ onSelectConversation }: Props) {
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleUserClick(user)}
                     className="text-xs text-gray-500 hover:text-[#5B0A0A] hover:underline"
                   >
                     Enviar

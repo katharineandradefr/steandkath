@@ -18,6 +18,7 @@ type Props = {
   savedMessages: SavedMessage[];
   onSubPanelChange: (panel: SubPanel) => void;
   onSelectConversation: (id: string) => void;
+  onCreateGroup: (name: string, memberIds: string[]) => void;
 };
 
 const ACTION_BUTTONS = [
@@ -29,10 +30,11 @@ const ACTION_BUTTONS = [
 
 type GroupModalProps = {
   onClose: () => void;
+  onCreateGroup: (name: string, memberIds: string[]) => void;
 };
 
 /** Modal simples de criação de grupo */
-function CreateGroupModal({ onClose }: GroupModalProps) {
+function CreateGroupModal({ onClose, onCreateGroup }: GroupModalProps) {
   const [groupName, setGroupName] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -40,6 +42,12 @@ function CreateGroupModal({ onClose }: GroupModalProps) {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  function handleCreate() {
+    if (!groupName.trim() || selected.length < 2) return;
+    onCreateGroup(groupName.trim(), selected);
+    onClose();
   }
 
   return (
@@ -52,13 +60,16 @@ function CreateGroupModal({ onClose }: GroupModalProps) {
           placeholder="Nome do grupo"
           value={groupName}
           onChange={(e) => setGroupName(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#5B0A0A]"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#5B0A0A]"
+          autoFocus
         />
 
         <div>
-          <p className="mb-2 text-xs font-medium text-gray-500">Selecionar participantes</p>
+          <p className="mb-2 text-xs font-medium text-gray-500">
+            Selecionar participantes (mín. 2)
+          </p>
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
-            {CONVERSATIONS.map((conv) => (
+            {CONVERSATIONS.filter((c) => !c.isGroup).map((conv) => (
               <button
                 key={conv.id}
                 type="button"
@@ -66,7 +77,7 @@ function CreateGroupModal({ onClose }: GroupModalProps) {
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                   selected.includes(conv.id)
                     ? "bg-[#5B0A0A] text-white"
-                    : "hover:bg-gray-50 text-gray-700"
+                    : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <div
@@ -92,7 +103,7 @@ function CreateGroupModal({ onClose }: GroupModalProps) {
           <button
             type="button"
             disabled={!groupName.trim() || selected.length < 2}
-            onClick={onClose}
+            onClick={handleCreate}
             className="flex-1 rounded-lg bg-[#5B0A0A] py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             Criar grupo
@@ -113,6 +124,7 @@ export function OptionsPanel({
   savedMessages,
   onSubPanelChange,
   onSelectConversation,
+  onCreateGroup,
 }: Props) {
   const [status, setStatus] = useState<StatusValue>("em-atendimento");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -190,7 +202,10 @@ export function OptionsPanel({
       </aside>
 
       {showCreateGroup && (
-        <CreateGroupModal onClose={() => setShowCreateGroup(false)} />
+        <CreateGroupModal
+          onClose={() => setShowCreateGroup(false)}
+          onCreateGroup={onCreateGroup}
+        />
       )}
     </>
   );

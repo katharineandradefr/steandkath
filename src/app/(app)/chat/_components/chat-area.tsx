@@ -1,13 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft } from "lucide-react";
+import { Bookmark, ChevronLeft, X } from "lucide-react";
 
 import type { Conversation, Message } from "./chat-types";
 import { MessageInput } from "./message-input";
 import { MessageContextMenu } from "./message-context-menu";
 
 type ContextMenu = { x: number; y: number; message: Message } | null;
+
+/** Lightbox para visualizar imagem em tamanho ampliado */
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+        aria-label="Fechar"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Imagem ampliada"
+        className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
 
 type Props = {
   conversation: Conversation;
@@ -17,6 +43,7 @@ type Props = {
   isReplying: boolean;
   onToggleRightPanel: () => void;
   onSendMessage: (text: string) => void;
+  onSendImage: (dataUrl: string) => void;
   onFavoriteMessage: (message: Message) => void;
 };
 
@@ -31,10 +58,12 @@ export function ChatArea({
   isReplying,
   onToggleRightPanel,
   onSendMessage,
+  onSendImage,
   onFavoriteMessage,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,13 +123,22 @@ export function ChatArea({
                 onClick={(e) => handleMessageClick(e, msg)}
               >
                 <div
-                  className={`relative rounded-2xl px-4 py-2.5 text-sm leading-relaxed text-gray-800 transition-opacity hover:opacity-80 ${
+                  className={`relative rounded-2xl text-sm leading-relaxed text-gray-800 transition-opacity hover:opacity-80 ${
                     msg.sender === "me"
                       ? "rounded-tr-sm bg-[#F1F1F1]"
                       : "rounded-tl-sm border border-gray-300 bg-[#E2E2E2]"
-                  }`}
+                  } ${msg.imageUrl ? "overflow-hidden p-0" : "px-4 py-2.5"}`}
                 >
-                  {msg.text}
+                  {msg.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={msg.imageUrl}
+                      alt="Imagem enviada"
+                      className="max-h-60 max-w-xs rounded-2xl object-cover"
+                    />
+                  ) : (
+                    msg.text
+                  )}
                   {favoritedIds.has(msg.id) && (
                     <Bookmark
                       className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 fill-gray-600 text-gray-600"
@@ -131,7 +169,7 @@ export function ChatArea({
       </div>
 
       {/* Input */}
-      <MessageInput onSend={onSendMessage} />
+      <MessageInput onSend={onSendMessage} onSendImage={onSendImage} />
 
       {/* Menu de contexto ao clicar na mensagem */}
       {contextMenu && (
@@ -143,7 +181,17 @@ export function ChatArea({
             navigator.clipboard.writeText(contextMenu.message.text).catch(() => undefined)
           }
           onClose={() => setContextMenu(null)}
+          onAmplify={
+            contextMenu.message.imageUrl
+              ? () => setLightboxSrc(contextMenu.message.imageUrl!)
+              : undefined
+          }
         />
+      )}
+
+      {/* Lightbox — ampliar imagem */}
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
       )}
     </div>
   );
