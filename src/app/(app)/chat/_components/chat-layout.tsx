@@ -162,10 +162,7 @@ export function ChatLayout() {
 
   return (
     /* Posicionamento fixed para ocupar toda a altura disponível sem fazer a página rolar */
-    <div
-      className="fixed bottom-0 top-0 flex overflow-hidden"
-      style={{ left: "var(--sidebar-width)", right: 0 }}
-    >
+    <div className="fixed inset-y-0 right-0 left-0 flex overflow-hidden bg-[#D9D9D9] pl-(--sidebar-width)">
       <ConversationList
         conversations={conversations}
         activeId={activeConversationId}

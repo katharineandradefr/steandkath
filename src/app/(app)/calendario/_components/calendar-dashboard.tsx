@@ -7,7 +7,7 @@ import { CreatePendencyModal } from "~/app/(app)/calendario/_components/create-p
 import { GoalFormModal } from "~/app/(app)/calendario/_components/goal-form-modal";
 import { MonthCalendar } from "~/app/(app)/calendario/_components/month-calendar";
 import { getUtcTodayStart } from "~/app/(app)/calendario/_utils/calendar-grid";
-import { goalOverlapsRange, type Goal } from "~/shared/goal";
+import type { Goal } from "~/shared/goal";
 import { api } from "~/trpc/react";
 
 type CalendarDashboardProps = {
@@ -22,8 +22,6 @@ export function CalendarDashboard({
   initialYear,
   initialMonth,
 }: CalendarDashboardProps) {
-  const [viewYear, setViewYear] = useState(initialYear);
-  const [viewMonth, setViewMonth] = useState(initialMonth);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [isPendencyModalOpen, setIsPendencyModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,20 +37,22 @@ export function CalendarDashboard({
     [selectedDay],
   );
 
-  const monthInput = { year: viewYear, month: viewMonth };
+  const referenceMonth = useMemo(() => {
+    if (selectedDay) {
+      return {
+        year: selectedDay.getUTCFullYear(),
+        month: selectedDay.getUTCMonth() + 1,
+      };
+    }
+    return { year: initialYear, month: initialMonth };
+  }, [selectedDay, initialYear, initialMonth]);
+
   const {
     data: monthGoals = [],
-    isLoading,
     isError,
-  } = api.goal.listByMonth.useQuery(monthInput);
+  } = api.goal.listByMonth.useQuery(referenceMonth);
 
   const utils = api.useUtils();
-
-  const handleMonthChange = useCallback((year: number, month: number) => {
-    setViewYear(year);
-    setViewMonth(month);
-    setSelectedGoalId(null);
-  }, []);
 
   const updateStatusMutation = api.goal.updateStatus.useMutation({
     onSuccess: async () => {
@@ -75,11 +75,8 @@ export function CalendarDashboard({
   };
 
   const handleSelectDay = useCallback(
-    (date: Date) => {
+    (date: Date, hasGoalOnDay: boolean) => {
       setSelectedDay(date);
-      const hasGoalOnDay = monthGoals.some((goal) =>
-        goalOverlapsRange(goal, date, date),
-      );
       if (hasGoalOnDay) return;
       const todayUtc = getUtcTodayStart().getTime();
       if (date.getTime() >= todayUtc) {
@@ -89,7 +86,7 @@ export function CalendarDashboard({
         setModalOpen(true);
       }
     },
-    [monthGoals],
+    [],
   );
 
   const handleEditGoal = (goal: Goal) => {
@@ -122,40 +119,30 @@ export function CalendarDashboard({
             </p>
           )}
 
-          {isLoading ? (
-            <p className="py-12 text-center text-calendar-muted">
-              Carregando calendário…
-            </p>
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-              <div className="min-h-[28rem] flex-[7] lg:min-h-0">
-                <MonthCalendar
-                  year={viewYear}
-                  month={viewMonth}
-                  goals={monthGoals}
-                  selectedDay={selectedDay}
-                  onSelectDay={handleSelectDay}
-                  onMonthChange={handleMonthChange}
-                />
-              </div>
-              <div className="min-h-[24rem] min-w-0 flex-[3] lg:min-h-0">
-                <CalendarSidePanel
-                  year={viewYear}
-                  month={viewMonth}
-                  monthGoals={monthGoals}
-                  selectedDay={selectedDay}
-                  selectedGoalId={selectedGoalId}
-                  weekReferenceDate={weekReferenceDate}
-                  onSelectGoal={setSelectedGoalId}
-                  onOpenCreatePendency={() => setIsPendencyModalOpen(true)}
-                  onCreateGoal={handleCreateGoal}
-                  onEditGoal={handleEditGoal}
-                  onCompleteGoal={handleCompleteGoal}
-                  onDeleteGoal={handleDeleteGoal}
-                />
-              </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+            <div className="min-h-[28rem] flex-[7] lg:min-h-0">
+              <MonthCalendar
+                selectedDay={selectedDay}
+                onSelectDay={handleSelectDay}
+              />
             </div>
-          )}
+            <div className="min-h-[24rem] min-w-0 flex-[3] lg:min-h-0">
+              <CalendarSidePanel
+                year={referenceMonth.year}
+                month={referenceMonth.month}
+                monthGoals={monthGoals}
+                selectedDay={selectedDay}
+                selectedGoalId={selectedGoalId}
+                weekReferenceDate={weekReferenceDate}
+                onSelectGoal={setSelectedGoalId}
+                onOpenCreatePendency={() => setIsPendencyModalOpen(true)}
+                onCreateGoal={handleCreateGoal}
+                onEditGoal={handleEditGoal}
+                onCompleteGoal={handleCompleteGoal}
+                onDeleteGoal={handleDeleteGoal}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
