@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "~/app/(app)/_components/placeholder-page";
+import { DrCofLayout } from "./_components/dr-cof-layout";
 
 export default function DrCofPage() {
-  return <PlaceholderPage title="Dr. Cof" />;
+  return <DrCofLayout />;
 }

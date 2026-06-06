@@ -1,4 +1,5 @@
 import { chatRouter } from "~/server/api/routers/chat";
+import { drCofRouter } from "~/server/api/routers/dr-cof";
 import { goalRouter } from "~/server/api/routers/goal";
 import { healthRouter } from "~/server/api/routers/health";
 import { pendencyRouter } from "~/server/api/routers/pendency";
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   savedText: savedTextRouter,
   pendency: pendencyRouter,
   chat: chatRouter,
+  drCof: drCofRouter,
   goal: goalRouter,
   user: userRouter,
 });

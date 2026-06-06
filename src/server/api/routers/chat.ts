@@ -30,7 +30,7 @@ export const chatRouter = createTRPCRouter({
 
       try {
         const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
         const historyBlock =
           input.history && input.history.length > 0
