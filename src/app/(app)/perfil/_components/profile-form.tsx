@@ -6,6 +6,7 @@ import { AvatarUpload } from "~/app/(app)/perfil/_components/avatar-upload";
 import { Dropdown } from "~/app/(app)/perfil/_components/dropdown";
 import { MultiDropdown } from "~/app/(app)/perfil/_components/multi-dropdown";
 import {
+  PENDENCY_AREA_BUTTON_SELECTED_STYLES,
   PENDENCY_AREA_BUTTON_STYLES,
   PENDENCY_AREA_KEYS,
   PENDENCY_AREA_LABELS,
@@ -143,9 +144,9 @@ export function ProfileForm() {
   }
 
   return (
-    <div className="rounded-3xl bg-calendar-bordeaux p-4 sm:p-6">
-      <div className="rounded-3xl bg-gray-100 p-6 shadow-sm sm:p-8">
-        <div className="mb-8 flex justify-center">
+    <div className="flex flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
+      <div className="flex flex-1 flex-col rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
+        <div className="mb-4 flex justify-center">
           <AvatarUpload
             value={form.photoBase64}
             onChange={(photoBase64) =>
@@ -154,7 +155,7 @@ export function ProfileForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
           <div>
             <label
               htmlFor="profile-name"
@@ -235,8 +236,8 @@ export function ProfileForm() {
           </div>
         </div>
 
-        <div className="mt-8">
-          <p className="mb-3 text-sm font-medium text-calendar-bordeaux">
+        <div className="mt-6">
+          <p className="mb-2 text-sm font-medium text-calendar-bordeaux">
             Selecione a grande area:
           </p>
           <div className="flex flex-wrap gap-2">
@@ -253,9 +254,11 @@ export function ProfileForm() {
                       area: current.area === areaKey ? null : areaKey,
                     }))
                   }
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
-                    PENDENCY_AREA_BUTTON_STYLES[areaKey]
-                  } ${selected ? "opacity-100" : "opacity-60 hover:opacity-80"}`}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+                    selected
+                      ? PENDENCY_AREA_BUTTON_SELECTED_STYLES[areaKey]
+                      : `${PENDENCY_AREA_BUTTON_STYLES[areaKey]} hover:brightness-95`
+                  }`}
                 >
                   {PENDENCY_AREA_LABELS[areaKey]}
                 </button>
@@ -264,7 +267,7 @@ export function ProfileForm() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-end gap-2">
+        <div className="mt-6 flex flex-col items-end gap-2">
           {saveMessage && (
             <p role="status" className="text-sm text-emerald-700">
               {saveMessage}

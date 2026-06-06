@@ -159,6 +159,17 @@ export const PENDENCY_AREA_BUTTON_STYLES: Record<PendencyAreaKey, string> = {
   cm: "bg-red-600 text-white",
 };
 
+export const PENDENCY_AREA_BUTTON_SELECTED_STYLES: Record<
+  PendencyAreaKey,
+  string
+> = {
+  go: "bg-pink-700 text-white",
+  ped: "bg-amber-600 text-gray-900",
+  prev: "bg-emerald-800 text-white",
+  cir: "bg-sky-700 text-white",
+  cm: "bg-red-800 text-white",
+};
+
 export const PENDENCY_AUDIENCES: readonly PendencyAudience[] = [
   "design",
   "medical_team",

@@ -246,7 +246,7 @@ export function PendencyBoard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-white/60">
+      <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-calendar-muted">
         Carregando pendências…
       </div>
     );
@@ -254,58 +254,60 @@ export function PendencyBoard() {
 
   if (isError) {
     return (
-      <div className="flex h-full items-center justify-center text-red-300">
+      <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-red-700">
         Não foi possível carregar as pendências.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <PendencyBoardHeader
-        urgencyFilter={urgencyFilter}
-        onUrgencyFilterChange={setUrgencyFilter}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onCreateClick={openCreate}
-      />
+    <div className="flex flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
+        <PendencyBoardHeader
+          urgencyFilter={urgencyFilter}
+          onUrgencyFilterChange={setUrgencyFilter}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onCreateClick={openCreate}
+        />
 
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-4">
-          {PENDENCY_STATUSES.map((status) => (
-            <PendencyColumn
-              key={status}
-              status={status}
-              pendencies={grouped[status]}
-              onOpen={openEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-4">
+            {PENDENCY_STATUSES.map((status) => (
+              <PendencyColumn
+                key={status}
+                status={status}
+                pendencies={grouped[status]}
+                onOpen={openEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activePendency ? (
-            <div className="w-[260px] rotate-2 opacity-95">
-              <PendencyCard pendency={activePendency} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activePendency ? (
+              <div className="w-[260px] rotate-2 opacity-95">
+                <PendencyCard pendency={activePendency} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
-      <PendencyDetailModal
-        open={modalOpen}
-        mode={modalMode}
-        initialValues={
-          modalMode === "edit" ? editingPendency : null
-        }
-        onClose={() => setModalOpen(false)}
-        onSave={handleSave}
-        isSaving={isSaving}
-      />
+        <PendencyDetailModal
+          open={modalOpen}
+          mode={modalMode}
+          initialValues={
+            modalMode === "edit" ? editingPendency : null
+          }
+          onClose={() => setModalOpen(false)}
+          onSave={handleSave}
+          isSaving={isSaving}
+        />
+      </div>
     </div>
   );
 }

@@ -29,13 +29,13 @@ export function PendencyBoardHeader({
     <header className="mb-6 shrink-0">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium tracking-wider text-brand-bright/80 uppercase">
+          <p className="text-xs font-medium tracking-wider text-calendar-bordeaux/70 uppercase">
             Grande área
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-calendar-bordeaux sm:text-3xl">
             {DEFAULT_AREA_TITLE}
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-white/60">
+          <p className="mt-2 max-w-xl text-sm text-calendar-muted">
             Protótipo visual — clique num cartão para editar ou use Criar
             Pendência. Alterações não persistem ao atualizar a página.
           </p>
@@ -43,7 +43,7 @@ export function PendencyBoardHeader({
         <button
           type="button"
           onClick={onCreateClick}
-          className="shrink-0 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white shadow-[0_0_24px_-8px_var(--color-brand)] transition hover:bg-brand-bright"
+          className="shrink-0 rounded-lg bg-calendar-cardinal px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-calendar-bordeaux focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
         >
           Criar Pendência
         </button>
@@ -57,12 +57,12 @@ export function PendencyBoardHeader({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar por título…"
-            className="w-full rounded-lg border border-sidebar-border bg-shell/60 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-brand/50 focus:outline-none focus:ring-2 focus:ring-brand/25"
+            className="w-full rounded-full bg-gray-200 px-4 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
           />
         </label>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-white/50">Urgência:</span>
+          <span className="text-xs text-calendar-bordeaux/70">Urgência:</span>
           <FilterChip
             active={urgencyFilter === null}
             onClick={() => onUrgencyFilterChange(null)}
@@ -99,8 +99,8 @@ function FilterChip({
       onClick={onClick}
       className={
         active
-          ? "rounded-full border border-brand/40 bg-brand/20 px-3 py-1 text-xs font-medium text-white"
-          : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/65 transition hover:border-white/20 hover:text-white"
+          ? "rounded-full bg-calendar-cardinal px-3 py-1 text-xs font-medium text-white"
+          : "rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-calendar-bordeaux transition-colors hover:bg-gray-300"
       }
     >
       {children}
