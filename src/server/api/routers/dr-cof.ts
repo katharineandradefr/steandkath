@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { z } from "zod";
 
 import { env } from "~/env";
@@ -35,53 +35,49 @@ export const drCofRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      if (!env.GEMINI_API_KEY) {
-        console.warn("[drCof.ask] GEMINI_API_KEY não configurada.");
+      if (!env.GROQ_API_KEY) {
+        console.warn("[drCof.ask] GROQ_API_KEY não configurada.");
         return { text: "Olá! Sou o Dr. Cof. Configure a chave da IA para começar." };
       }
 
       const knowledgeDocs = await fetchKnowledge();
 
-      const knowledgeBlock =
-        knowledgeDocs.length > 0
-          ? knowledgeDocs
-              .map((k, i) => `[${i + 1}] ${k.title}:\n${k.content}`)
-              .join("\n\n")
-          : null;
-
-      const historyBlock =
-        input.history && input.history.length > 0
-          ? input.history
-              .map((h) =>
-                h.role === "user"
-                  ? `Usuário perguntou: "${h.text}"`
-                  : `Dr. Cof respondeu: "${h.text}"`,
-              )
-              .join("\n")
-          : null;
-
-      const prompt = [
+      const systemPrompt = [
         `Você é o Dr. Cof, assistente de IA da MedCof — empresa de cursos preparatórios para Residência Médica.`,
         `Responda sempre em português brasileiro, de forma clara, objetiva e profissional.`,
-        knowledgeBlock
-          ? `\nUse os seguintes conhecimentos para responder:\n\n${knowledgeBlock}`
+        `Responda de forma direta e útil, sem repetir a pergunta nem usar prefixos como "Dr. Cof:".`,
+        knowledgeDocs.length > 0
+          ? `\nUse os seguintes conhecimentos para responder:\n\n${knowledgeDocs.map((k, i) => `[${i + 1}] ${k.title}:\n${k.content}`).join("\n\n")}`
           : `\nAinda não possuo conhecimentos específicos cadastrados. Responda de forma geral e educada.`,
-        historyBlock ? `\nContexto da conversa:\n${historyBlock}` : "",
-        `\nPergunta do usuário: "${input.message}"`,
-        `\nResponda de forma direta e útil, sem repetir a pergunta nem usar prefixos como "Dr. Cof:".`,
       ]
         .filter(Boolean)
         .join("\n");
 
+      const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+      ];
+
+      if (input.history) {
+        for (const h of input.history) {
+          messages.push({ role: h.role === "user" ? "user" : "assistant", content: h.text });
+        }
+      }
+
+      messages.push({ role: "user", content: input.message });
+
       try {
-        const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const groq = new Groq({ apiKey: env.GROQ_API_KEY });
+        const completion = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages,
+          max_tokens: 1024,
+        });
+        const text = completion.choices[0]?.message?.content?.trim() ?? "";
         return { text: text || "Não consegui formular uma resposta. Tente reformular a pergunta." };
       } catch (err) {
-        console.error("[drCof.ask] Erro Gemini:", err);
-        return { text: "Não consegui me conectar à IA agora. Verifique sua chave GEMINI_API_KEY e tente novamente." };
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[drCof.ask] Erro Groq:", message);
+        return { text: `Erro da IA: ${message}` };
       }
     }),
 
