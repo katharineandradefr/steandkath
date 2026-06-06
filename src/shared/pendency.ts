@@ -216,6 +216,19 @@ export const PENDENCY_PROJECT_LABELS: Record<PendencyProjectKey, string> = {
   concursus: "ConcurSUS",
 };
 
+/** Cores das barrinhas de meta no calendário (sincronizadas com a lista do chat). */
+export const PENDENCY_PROJECT_BAR_HEX: Record<PendencyProjectKey, string> = {
+  extensivo: "#dc2626",
+  extensivo_performance: "#c026d3",
+  internato: "#7c3aed",
+  medical_life_hacks_ps: "#c084fc",
+  radio: "#78716c",
+  revalida: "#2563eb",
+  usa: "#dc2626",
+  clinicof: "#0891b2",
+  concursus: "#ea580c",
+};
+
 export const PENDENCY_PROJECT_STYLES: Record<
   PendencyProjectKey,
   { badgeOnLight: string; badgeOnDark: string }

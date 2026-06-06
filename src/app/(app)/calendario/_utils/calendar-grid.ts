@@ -1,4 +1,8 @@
 import { goalOverlapsRange, parseGoalDate, type Goal } from "~/shared/goal";
+import {
+  PENDENCY_PROJECT_KEYS,
+  type PendencyProjectKey,
+} from "~/shared/pendency";
 
 export type CalendarCell = {
   date: Date;
@@ -8,7 +12,7 @@ export type CalendarCell = {
 };
 
 export type GoalBarSegment = {
-  goalId: string;
+  projectKey: PendencyProjectKey;
   isStart: boolean;
   isEnd: boolean;
 };
@@ -78,12 +82,13 @@ export function getUtcTodayStart(): Date {
 }
 
 /**
- * Gera grade de 42 células (6 semanas) para o mês informado.
+ * Gera grade de células para o mês informado (5 ou 6 semanas conforme necessário).
  */
 export function buildCalendarGrid(year: number, month: number): CalendarCell[] {
   const firstOfMonth = toUtcDate(year, month, 1);
   const startOffset = firstOfMonth.getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const today = new Date();
   const todayUtc = toUtcDate(
     today.getFullYear(),
@@ -93,7 +98,7 @@ export function buildCalendarGrid(year: number, month: number): CalendarCell[] {
 
   const cells: CalendarCell[] = [];
 
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < totalCells; i++) {
     const dayNumber = i - startOffset + 1;
     const isCurrentMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
 
@@ -129,21 +134,33 @@ export function getGoalBarSegmentsForCell(
   cellDate: Date,
   goals: Goal[],
 ): GoalBarSegment[] {
-  const segments: GoalBarSegment[] = [];
+  const byProject = new Map<
+    PendencyProjectKey,
+    { isStart: boolean; isEnd: boolean }
+  >();
 
   for (const goal of goals) {
     if (!goalOverlapsRange(goal, cellDate, cellDate)) continue;
 
     const start = parseGoalDate(goal.startDate);
     const end = parseGoalDate(goal.dueDate);
-    segments.push({
-      goalId: goal.id,
-      isStart: isSameUtcDay(cellDate, start),
-      isEnd: isSameUtcDay(cellDate, end),
-    });
+    const existing = byProject.get(goal.projectKey);
+    const isStart = isSameUtcDay(cellDate, start);
+    const isEnd = isSameUtcDay(cellDate, end);
+
+    if (existing) {
+      existing.isStart = existing.isStart || isStart;
+      existing.isEnd = existing.isEnd || isEnd;
+    } else {
+      byProject.set(goal.projectKey, { isStart, isEnd });
+    }
   }
 
-  return segments;
+  return PENDENCY_PROJECT_KEYS.flatMap((projectKey) => {
+    const segment = byProject.get(projectKey);
+    if (!segment) return [];
+    return [{ projectKey, ...segment }];
+  });
 }
 
 /**
@@ -166,4 +183,19 @@ export function getNextMonth(year: number, month: number): {
 } {
   if (month === 12) return { year: year + 1, month: 1 };
   return { year, month: month + 1 };
+}
+
+/**
+ * Desloca um ano/mês por N meses (delta negativo = passado).
+ */
+export function addMonths(
+  year: number,
+  month: number,
+  delta: number,
+): { year: number; month: number } {
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+  };
 }
