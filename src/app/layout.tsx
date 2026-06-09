@@ -30,7 +30,14 @@ export default async function RootLayout({
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="pt-BR" className={`${geist.variable}`}>
+    <html lang="pt-BR" className={`${geist.variable}`} data-theme="light" data-font-size="medium">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=JSON.parse(localStorage.getItem("steandkath-user-preferences")||"null");if(p&&p.colorMode)document.documentElement.dataset.theme=p.colorMode;if(p&&p.fontSize)document.documentElement.dataset.fontSize=p.fontSize;}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-shell text-white antialiased">
         <TRPCReactProvider>
           <AuthSessionProvider session={session}>

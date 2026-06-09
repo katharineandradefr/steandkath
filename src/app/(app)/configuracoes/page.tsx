@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "~/app/(app)/_components/placeholder-page";
+import { SettingsPage } from "~/app/(app)/configuracoes/_components/settings-page";
 
 export default function ConfiguracoesPage() {
-  return <PlaceholderPage title="Configurações" />;
+  return <SettingsPage />;
 }

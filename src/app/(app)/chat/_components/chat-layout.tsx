@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 
 import { loadChatState, saveChatState } from "~/app/(app)/chat/_utils/chat-storage";
+import { useUserPreferences } from "~/app/_components/user-preferences-provider";
+import { playMessageSound } from "~/shared/message-sound";
+import { showMessageNotification } from "~/shared/message-notifications";
 import { api } from "~/trpc/react";
 import type { Conversation, Message, SavedMessage, SubPanel } from "./chat-types";
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
@@ -36,6 +39,15 @@ export function ChatLayout() {
   const messages = messagesByConversation[activeConversationId] ?? [];
 
   const replyMutation = api.chat.reply.useMutation();
+  const { preferences } = useUserPreferences();
+
+  function notifyIncomingMessage(senderName: string, text: string) {
+    playMessageSound(preferences.messageSound);
+
+    if (preferences.messageNotifications) {
+      showMessageNotification(senderName, text);
+    }
+  }
 
   useEffect(() => {
     const loaded = loadChatState();
@@ -100,16 +112,20 @@ export function ChatLayout() {
         })),
       });
 
+      const replyText = result.text;
+
       setConversationMessages(conversationId, (prev) => [
         ...prev,
         {
           id: `${Date.now() + 1}`,
-          text: result.text,
+          text: replyText,
           sender: "other",
           senderName: activeConversation.name,
           timestamp: now(),
         },
       ]);
+
+      notifyIncomingMessage(activeConversation.name, replyText);
     } finally {
       setIsReplying(false);
     }
