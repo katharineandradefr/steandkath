@@ -35,6 +35,7 @@ const userSchema = new Schema(
       default: null,
     },
     photoBase64: { type: String, default: null },
+    password: { type: String, default: null, maxlength: 200 },
   },
   { timestamps: true },
 );
@@ -43,6 +44,11 @@ export type UserDoc = InferSchemaType<typeof userSchema> & {
   createdAt: Date;
   updatedAt: Date;
 };
+
+// Em dev o modelo fica em cache no hot reload; recarrega o schema quando muda.
+if (process.env.NODE_ENV !== "production" && models.User) {
+  delete models.User;
+}
 
 export const UserModel =
   (models.User as Model<UserDoc> | undefined) ??

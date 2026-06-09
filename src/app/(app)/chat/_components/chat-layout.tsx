@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { useUserPreferences } from "~/app/_components/user-preferences-provider";
+import { playMessageSound } from "~/shared/message-sound";
+import { showMessageNotification } from "~/shared/message-notifications";
 import { api } from "~/trpc/react";
 import type { Conversation, Message, SubPanel } from "./chat-types";
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
@@ -36,6 +39,15 @@ export function ChatLayout() {
     conversations.find((c) => c.id === activeConversationId) ?? conversations[0]!;
 
   const replyMutation = api.chat.reply.useMutation();
+  const { preferences } = useUserPreferences();
+
+  function notifyIncomingMessage(senderName: string, text: string) {
+    playMessageSound(preferences.messageSound);
+
+    if (preferences.messageNotifications) {
+      showMessageNotification(senderName, text);
+    }
+  }
 
   function now() {
     return new Date().toLocaleTimeString("pt-BR", {
@@ -67,16 +79,20 @@ export function ChatLayout() {
         })),
       });
 
+      const replyText = result.text;
+
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now() + 1}`,
-          text: result.text,
+          text: replyText,
           sender: "other",
           senderName: activeConversation.name,
           timestamp: now(),
         },
       ]);
+
+      notifyIncomingMessage(activeConversation.name, replyText);
     } finally {
       setIsReplying(false);
     }

@@ -29,6 +29,23 @@ export type User = {
   projects: PendencyProjectKey[];
   area?: PendencyAreaKey | null;
   photoBase64?: string | null;
+  hasPassword: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type UserWithPassword = User & {
+  password: string | null;
+};
+
+/** Usuário de exemplo exibido na tela de Configurações. */
+export const EXAMPLE_USER = {
+  id: "example-stefani-silva",
+  name: "Stefani Silva",
+  email: "stefani.melo@grupomedcof.com.br",
+  phone: "(11) 96100-5263",
+  password: "123456ok",
+  role: "coordinator" as UserRole,
+  projects: ["internato", "extensivo"] as PendencyProjectKey[],
+  area: "cm" as PendencyAreaKey,
 };
