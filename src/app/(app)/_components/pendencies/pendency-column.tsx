@@ -61,7 +61,7 @@ export function PendencyColumn({
 
   return (
     <section
-      className={`flex w-[min(100%,280px)] shrink-0 flex-col rounded-2xl border shadow-sm ${tint.section}`}
+      className={`flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col rounded-2xl border shadow-sm ${tint.section}`}
       aria-label={PENDENCY_STATUS_LABELS[status]}
     >
       <header
@@ -81,10 +81,9 @@ export function PendencyColumn({
         ref={setNodeRef}
         className={
           isOver
-            ? "flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto p-2 ring-2 ring-inset ring-calendar-cardinal/40"
-            : "flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto p-2"
+            ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2 ring-2 ring-inset ring-calendar-cardinal/40"
+            : "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2"
         }
-        style={{ maxHeight: "calc(100vh - 280px)" }}
       >
         <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
           {pendencies.map((p) => (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { List, BookmarkCheck, Monitor, History, ChevronLeft, Users } from "lucide-react";
 
 import type { SubPanel, StatusValue } from "./chat-types";
-import type { SavedMessage } from "./chat-layout";
+import type { SavedMessage } from "./chat-types";
 import { CONVERSATIONS } from "./chat-data";
 import { StatusDropdown } from "./status-dropdown";
 import { ComputadoresPanel } from "./right-panels/computadores-panel";

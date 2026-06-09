@@ -93,10 +93,7 @@ export function DrCofLayout() {
   }
 
   return (
-    <div
-      className="fixed bottom-0 top-0 flex flex-col overflow-hidden bg-[#E2E2E2]"
-      style={{ left: "var(--sidebar-width)", right: 0 }}
-    >
+    <div className="fixed inset-y-0 right-0 left-0 flex flex-col overflow-hidden bg-white pl-(--sidebar-width)">
       {/* Header */}
       <DrCofHeader
         historyOpen={historyOpen}

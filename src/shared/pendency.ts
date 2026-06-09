@@ -280,6 +280,28 @@ export const DEFAULT_AREA_TITLE = "Clínica Médica";
 
 export const DEFAULT_PROJECT_KEY: PendencyProjectKey = "extensivo";
 
+/** Projetos que exigem Grande área no modal de pendência. */
+export const PROJECTS_REQUIRING_AREA: readonly PendencyProjectKey[] = [
+  "extensivo",
+  "extensivo_performance",
+  "internato",
+  "revalida",
+] as const;
+
+/**
+ * Indica se o projeto exige seleção de Grande área.
+ */
+export function projectRequiresArea(projectKey: PendencyProjectKey): boolean {
+  return (PROJECTS_REQUIRING_AREA as readonly string[]).includes(projectKey);
+}
+
+/**
+ * Verifica se o valor é uma chave de Grande área válida.
+ */
+export function isPendencyAreaKey(value: string): value is PendencyAreaKey {
+  return (PENDENCY_AREA_KEYS as readonly string[]).includes(value);
+}
+
 /** Classes Tailwind para badges de urgência (fundo claro vs. modal escuro). */
 export const PENDENCY_URGENCY_STYLES: Record<
   PendencyUrgency,
@@ -436,6 +458,42 @@ export function filterPendenciesByUrgency(
 ): Pendency[] {
   if (urgency === null) return pendencies;
   return pendencies.filter((p) => p.urgency === urgency);
+}
+
+/**
+ * Filtra pendências por urgências; array vazio = todas.
+ */
+export function filterPendenciesByUrgencies(
+  pendencies: Pendency[],
+  urgencies: PendencyUrgency[],
+): Pendency[] {
+  if (urgencies.length === 0) return pendencies;
+  const set = new Set(urgencies);
+  return pendencies.filter((p) => set.has(p.urgency));
+}
+
+/**
+ * Filtra pendências por Grande área; array vazio = todas.
+ */
+export function filterPendenciesByAreas(
+  pendencies: Pendency[],
+  areaKeys: PendencyAreaKey[],
+): Pendency[] {
+  if (areaKeys.length === 0) return pendencies;
+  const set = new Set<string>(areaKeys);
+  return pendencies.filter((p) => set.has(p.areaKey));
+}
+
+/**
+ * Filtra pendências por projeto; array vazio = todos.
+ */
+export function filterPendenciesByProjects(
+  pendencies: Pendency[],
+  projectKeys: PendencyProjectKey[],
+): Pendency[] {
+  if (projectKeys.length === 0) return pendencies;
+  const set = new Set(projectKeys);
+  return pendencies.filter((p) => set.has(p.projectKey));
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import type { SavedMessage } from "../chat-layout";
+import type { SavedMessage } from "../chat-types";
 
 type Props = {
   messages: SavedMessage[];

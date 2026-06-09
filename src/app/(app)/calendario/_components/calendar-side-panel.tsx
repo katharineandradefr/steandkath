@@ -134,30 +134,32 @@ export function CalendarSidePanel({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
-      <section>
+      <section className="shrink-0">
         <p className="mb-3 text-sm text-calendar-muted">Essa Semana:</p>
-        {weekLoading ? (
-          <p className="text-center text-sm text-calendar-muted">Carregando…</p>
-        ) : weekGoals.length === 0 ? (
-          <div className="py-4 text-center">
-            <StackedCubesIllustration />
-            <p className="mt-3 text-sm text-calendar-muted">
-              Não tem nada aqui
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {weekGoals.map((goal) => (
-              <li key={goal.id}>
-                <GoalCard
-                  goal={goal}
-                  selected={selectedGoalId === goal.id}
-                  onSelect={() => onSelectGoal(goal.id)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="h-52 overflow-y-auto pr-1">
+          {weekLoading ? (
+            <p className="text-center text-sm text-calendar-muted">Carregando…</p>
+          ) : weekGoals.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <StackedCubesIllustration />
+              <p className="mt-3 text-sm text-calendar-muted">
+                Não tem nada aqui
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {weekGoals.map((goal) => (
+                <li key={goal.id}>
+                  <GoalCard
+                    goal={goal}
+                    selected={selectedGoalId === goal.id}
+                    onSelect={() => onSelectGoal(goal.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       <div className="flex min-w-0 items-center gap-1">

@@ -44,7 +44,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div
-      className="min-h-screen bg-linear-to-br from-shell-mid via-shell-warm to-shell text-white"
+      className="h-screen overflow-hidden bg-linear-to-br from-shell-mid via-shell-warm to-shell text-white"
       style={
         hydrated
           ? ({ "--sidebar-width": `${widthPx}px` } as React.CSSProperties)
@@ -62,8 +62,8 @@ export function AppShell({ children }: AppShellProps) {
         />
       )}
 
-      <div className="flex min-h-screen min-w-0 flex-col pl-(--sidebar-width) transition-[padding] duration-300 ease-in-out">
-        <main className="flex min-h-0 flex-1 flex-col overflow-auto p-4 sm:p-6 md:p-8">
+      <div className="flex h-full min-h-0 min-w-0 flex-col pl-(--sidebar-width) transition-[padding] duration-300 ease-in-out">
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 md:p-8">
           {children}
         </main>
       </div>

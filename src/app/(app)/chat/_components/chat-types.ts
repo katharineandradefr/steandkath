@@ -21,6 +21,15 @@ export type Message = {
   timestamp: string;
 };
 
+/** Mensagem salva como favorita */
+export type SavedMessage = {
+  id: string;
+  senderName: string;
+  avatarColor: string;
+  initials: string;
+  preview: string;
+};
+
 export type StatusValue =
   | "em-atendimento"
   | "sem-atendimento"

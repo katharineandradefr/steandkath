@@ -36,7 +36,7 @@ export function DrCofMessages({ messages, isReplying }: Props) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto bg-[#E2E2E2] p-6">
       <div className="flex flex-col gap-5">
         {messages.map((msg) => (
           <div

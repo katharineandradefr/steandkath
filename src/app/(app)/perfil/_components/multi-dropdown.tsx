@@ -36,7 +36,7 @@ export function MultiDropdown({
 }: MultiDropdownProps) {
   const labelId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const pillRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const badgeRef = useRef<HTMLSpanElement | null>(null);
@@ -167,14 +167,21 @@ export function MultiDropdown({
       >
         {label}
       </label>
-      <button
+      <div
         ref={buttonRef}
-        type="button"
+        role="combobox"
+        tabIndex={0}
         aria-labelledby={labelId}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="relative flex min-h-[2.75rem] w-full items-center justify-between gap-2 rounded-full bg-gray-200 px-3 py-1.5 text-left text-sm text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setOpen((current) => !current);
+          }
+        }}
+        className="relative flex min-h-[2.75rem] w-full cursor-pointer items-center justify-between gap-2 rounded-full bg-gray-200 px-3 py-1.5 text-left text-sm text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
       >
         {values.length > 0 && (
           <div
@@ -216,7 +223,7 @@ export function MultiDropdown({
           }`}
           aria-hidden
         />
-      </button>
+      </div>
 
       {open && (
         <div

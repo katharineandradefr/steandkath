@@ -1,30 +1,45 @@
 "use client";
 
 import {
-  DEFAULT_AREA_TITLE,
-  PENDENCY_URGENCY_LABELS,
-  PENDENCY_URGENCIES,
+  PENDENCY_AREA_FULL_LABELS,
+  type PendencyAreaKey,
+  type PendencyProjectKey,
   type PendencyUrgency,
 } from "~/shared/pendency";
 
+import { PendencyFiltersMenu } from "./pendency-filters-menu";
+
 type PendencyBoardHeaderProps = {
-  urgencyFilter: PendencyUrgency | null;
-  onUrgencyFilterChange: (urgency: PendencyUrgency | null) => void;
+  urgencyFilters: PendencyUrgency[];
+  onUrgencyFiltersChange: (urgencies: PendencyUrgency[]) => void;
+  areaFilters: PendencyAreaKey[];
+  onAreaFiltersChange: (areas: PendencyAreaKey[]) => void;
+  projectFilters: PendencyProjectKey[];
+  onProjectFiltersChange: (projects: PendencyProjectKey[]) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCreateClick: () => void;
 };
 
 /**
- * Cabeçalho do board: título da área fixa, busca, filtros e criar pendência.
+ * Cabeçalho do board: título dinâmico, busca, filtros e criar pendência.
  */
 export function PendencyBoardHeader({
-  urgencyFilter,
-  onUrgencyFilterChange,
+  urgencyFilters,
+  onUrgencyFiltersChange,
+  areaFilters,
+  onAreaFiltersChange,
+  projectFilters,
+  onProjectFiltersChange,
   searchQuery,
   onSearchChange,
   onCreateClick,
 }: PendencyBoardHeaderProps) {
+  const areaTitle =
+    areaFilters.length === 1
+      ? PENDENCY_AREA_FULL_LABELS[areaFilters[0]!]
+      : "Todas as áreas";
+
   return (
     <header className="mb-6 shrink-0">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -33,12 +48,8 @@ export function PendencyBoardHeader({
             Grande área
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-calendar-bordeaux sm:text-3xl">
-            {DEFAULT_AREA_TITLE}
+            {areaTitle}
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-calendar-muted">
-            Protótipo visual — clique num cartão para editar ou use Criar
-            Pendência. Alterações não persistem ao atualizar a página.
-          </p>
         </div>
         <button
           type="button"
@@ -49,7 +60,7 @@ export function PendencyBoardHeader({
         </button>
       </div>
 
-      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <label className="relative min-w-[200px] flex-1 sm:max-w-xs">
           <span className="sr-only">Buscar pendência</span>
           <input
@@ -61,49 +72,15 @@ export function PendencyBoardHeader({
           />
         </label>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-calendar-bordeaux/70">Urgência:</span>
-          <FilterChip
-            active={urgencyFilter === null}
-            onClick={() => onUrgencyFilterChange(null)}
-          >
-            Todas
-          </FilterChip>
-          {PENDENCY_URGENCIES.map((u) => (
-            <FilterChip
-              key={u}
-              active={urgencyFilter === u}
-              onClick={() => onUrgencyFilterChange(u)}
-            >
-              {PENDENCY_URGENCY_LABELS[u]}
-            </FilterChip>
-          ))}
-        </div>
+        <PendencyFiltersMenu
+          urgencyFilters={urgencyFilters}
+          onUrgencyFiltersChange={onUrgencyFiltersChange}
+          areaFilters={areaFilters}
+          onAreaFiltersChange={onAreaFiltersChange}
+          projectFilters={projectFilters}
+          onProjectFiltersChange={onProjectFiltersChange}
+        />
       </div>
     </header>
-  );
-}
-
-function FilterChip({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? "rounded-full bg-calendar-cardinal px-3 py-1 text-xs font-medium text-white"
-          : "rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-calendar-bordeaux transition-colors hover:bg-gray-300"
-      }
-    >
-      {children}
-    </button>
   );
 }

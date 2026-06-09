@@ -13,8 +13,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   addMonths,
+  assignGoalLanes,
   buildCalendarGrid,
   formatMonthYear,
+  getGoalBarLaneBottomPx,
   getGoalBarSegmentsForCell,
   getNextMonth,
   getPreviousMonth,
@@ -25,7 +27,6 @@ import {
   type CalendarCell,
   type GoalBarSegment,
 } from "~/app/(app)/calendario/_utils/calendar-grid";
-import { goalOverlapsRange } from "~/shared/goal";
 import { PENDENCY_PROJECT_BAR_HEX } from "~/shared/pendency";
 import { api } from "~/trpc/react";
 
@@ -35,24 +36,27 @@ const MAX_MONTH_WINDOW = 18;
 
 type MonthCalendarProps = {
   selectedDay: Date | null;
-  onSelectDay: (date: Date, hasGoalOnDay: boolean) => void;
+  onSelectDay: (date: Date) => void;
+  onActivateDay: (date: Date) => void;
 };
 
 type MonthBlockProps = {
   year: number;
   month: number;
   selectedDay: Date | null;
-  onSelectDay: (date: Date, hasGoalOnDay: boolean) => void;
+  onSelectDay: (date: Date) => void;
+  onActivateDay: (date: Date) => void;
 };
 
 /**
  * Bloco de um mês: busca metas e renderiza a grade (5 ou 6 semanas).
  */
 const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
-  function MonthBlock({ year, month, selectedDay, onSelectDay }, ref) {
+  function MonthBlock({ year, month, selectedDay, onSelectDay, onActivateDay }, ref) {
     const cells = buildCalendarGrid(year, month);
     const weeks = cells.length / 7;
     const { data: goals = [] } = api.goal.listByMonth.useQuery({ year, month });
+    const lanes = useMemo(() => assignGoalLanes(goals), [goals]);
     const [startOfTodayUtc, setStartOfTodayUtc] = useState<number | null>(null);
 
     useEffect(() => {
@@ -73,7 +77,7 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
           }}
         >
           {cells.map((cell) => {
-            const segments = getGoalBarSegmentsForCell(cell.date, goals);
+            const segments = getGoalBarSegmentsForCell(cell.date, goals, lanes);
             const dayLabel = String(cell.day).padStart(2, "0");
             const isPast =
               startOfTodayUtc !== null &&
@@ -82,9 +86,6 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
             const isSelected =
               selectedDay !== null && isSameUtcDay(cell.date, selectedDay);
             const isClickable = cell.isCurrentMonth;
-            const hasGoalOnDay = goals.some((goal) =>
-              goalOverlapsRange(goal, cell.date, cell.date),
-            );
 
             const cellContent = (
               <CalendarDayCellContent
@@ -99,15 +100,16 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
                 <button
                   key={cell.date.toISOString()}
                   type="button"
-                  onClick={() => onSelectDay(cell.date, hasGoalOnDay)}
+                  onClick={() => onSelectDay(cell.date)}
+                  onDoubleClick={() => onActivateDay(cell.date)}
                   aria-pressed={isSelected}
                   aria-label={`Selecionar dia ${dayLabel}`}
-                  className={`relative min-h-0 w-full border border-gray-200 text-left transition-colors duration-150 hover:bg-calendar-cardinal/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-calendar-cardinal ${
-                    isPast ? "bg-gray-50" : "bg-white"
-                  } ${
+                  className={`relative min-h-0 w-full border border-gray-200 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-calendar-cardinal ${
                     isSelected
-                      ? "bg-calendar-cardinal/[0.12] hover:bg-calendar-cardinal/[0.12]"
-                      : ""
+                      ? "bg-red-200 hover:bg-red-200"
+                      : isPast
+                        ? "bg-gray-50 hover:bg-calendar-cardinal/[0.05]"
+                        : "bg-white hover:bg-calendar-cardinal/[0.05]"
                   } ${cell.isToday ? "ring-2 ring-inset ring-calendar-cardinal/50" : ""}`}
                 >
                   {cellContent}
@@ -135,7 +137,11 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
 /**
  * Calendário com scroll vertical contínuo de meses empilhados.
  */
-export function MonthCalendar({ selectedDay, onSelectDay }: MonthCalendarProps) {
+export function MonthCalendar({
+  selectedDay,
+  onSelectDay,
+  onActivateDay,
+}: MonthCalendarProps) {
   const today = useMemo(() => getUtcTodayStart(), []);
   const baseYear = today.getUTCFullYear();
   const baseMonth = today.getUTCMonth() + 1;
@@ -404,6 +410,7 @@ export function MonthCalendar({ selectedDay, onSelectDay }: MonthCalendarProps) 
               month={month}
               selectedDay={selectedDay}
               onSelectDay={onSelectDay}
+              onActivateDay={onActivateDay}
             />
           );
         })}
@@ -441,28 +448,24 @@ function CalendarDayCellContent({
         {dayLabel}
       </span>
 
-      {segments.length > 0 && (
-        <div className="absolute right-0 bottom-2 left-0 flex flex-col gap-0.5 px-0.5">
-          {segments.map((segment) => (
-            <div
-              key={`${cell.date.toISOString()}-${segment.projectKey}`}
-              className={`h-1.5 ${
-                segment.isStart && segment.isEnd
-                  ? "mx-1 rounded-full"
-                  : segment.isStart
-                    ? "ml-1 rounded-l-full"
-                    : segment.isEnd
-                      ? "mr-1 rounded-r-full"
-                      : ""
-              }`}
-              style={{
-                backgroundColor:
-                  PENDENCY_PROJECT_BAR_HEX[segment.projectKey],
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {segments.map((segment) => (
+        <div
+          key={`${cell.date.toISOString()}-${segment.goalId}`}
+          className={`absolute right-0 left-0 h-1.5 px-0.5 ${
+            segment.isStart && segment.isEnd
+              ? "mx-1 rounded-full"
+              : segment.isStart
+                ? "ml-1 rounded-l-full"
+                : segment.isEnd
+                  ? "mr-1 rounded-r-full"
+                  : ""
+          }`}
+          style={{
+            bottom: `${getGoalBarLaneBottomPx(segment.lane)}px`,
+            backgroundColor: PENDENCY_PROJECT_BAR_HEX[segment.projectKey],
+          }}
+        />
+      ))}
     </>
   );
 }

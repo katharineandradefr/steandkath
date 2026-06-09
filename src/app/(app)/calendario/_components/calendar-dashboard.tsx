@@ -74,20 +74,20 @@ export function CalendarDashboard({
     setModalOpen(true);
   };
 
-  const handleSelectDay = useCallback(
-    (date: Date, hasGoalOnDay: boolean) => {
-      setSelectedDay(date);
-      if (hasGoalOnDay) return;
-      const todayUtc = getUtcTodayStart().getTime();
-      if (date.getTime() >= todayUtc) {
-        setModalMode("create");
-        setEditingGoal(null);
-        setGoalInitialStartDate(date);
-        setModalOpen(true);
-      }
-    },
-    [],
-  );
+  const handleSelectDay = useCallback((date: Date) => {
+    setSelectedDay(date);
+  }, []);
+
+  const handleActivateDay = useCallback((date: Date) => {
+    setSelectedDay(date);
+    const todayUtc = getUtcTodayStart().getTime();
+    if (date.getTime() >= todayUtc) {
+      setModalMode("create");
+      setEditingGoal(null);
+      setGoalInitialStartDate(date);
+      setModalOpen(true);
+    }
+  }, []);
 
   const handleEditGoal = (goal: Goal) => {
     setModalMode("edit");
@@ -124,6 +124,7 @@ export function CalendarDashboard({
               <MonthCalendar
                 selectedDay={selectedDay}
                 onSelectDay={handleSelectDay}
+                onActivateDay={handleActivateDay}
               />
             </div>
             <div className="min-h-[24rem] min-w-0 flex-[3] lg:min-h-0">

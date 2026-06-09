@@ -14,13 +14,17 @@ import { useMemo, useState } from "react";
 
 import {
   DEFAULT_AREA_KEY,
+  filterPendenciesByAreas,
+  filterPendenciesByProjects,
   filterPendenciesBySearch,
-  filterPendenciesByUrgency,
+  filterPendenciesByUrgencies,
   groupPendenciesByStatus,
   PENDENCY_STATUSES,
   stripHtmlToPlainText,
   type Pendency,
+  type PendencyAreaKey,
   type PendencyFormValues,
+  type PendencyProjectKey,
   type PendencyUrgency,
 } from "~/shared/pendency";
 import { api } from "~/trpc/react";
@@ -47,9 +51,9 @@ function buildReorderMoves(pendencies: Pendency[]) {
  */
 export function PendencyBoard() {
   const utils = api.useUtils();
-  const [urgencyFilter, setUrgencyFilter] = useState<PendencyUrgency | null>(
-    null,
-  );
+  const [urgencyFilters, setUrgencyFilters] = useState<PendencyUrgency[]>([]);
+  const [areaFilters, setAreaFilters] = useState<PendencyAreaKey[]>([]);
+  const [projectFilters, setProjectFilters] = useState<PendencyProjectKey[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -166,10 +170,12 @@ export function PendencyBoard() {
   );
 
   const filtered = useMemo(() => {
-    let list = filterPendenciesByUrgency(pendencies, urgencyFilter);
+    let list = filterPendenciesByUrgencies(pendencies, urgencyFilters);
+    list = filterPendenciesByAreas(list, areaFilters);
+    list = filterPendenciesByProjects(list, projectFilters);
     list = filterPendenciesBySearch(list, searchQuery);
     return list;
-  }, [pendencies, urgencyFilter, searchQuery]);
+  }, [pendencies, urgencyFilters, areaFilters, projectFilters, searchQuery]);
 
   const grouped = useMemo(
     () => groupPendenciesByStatus(filtered),
@@ -246,26 +252,35 @@ export function PendencyBoard() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-calendar-muted">
-        Carregando pendências…
+      <div className="-m-4 flex h-full min-h-0 flex-1 flex-col sm:-m-6 md:-m-8">
+        <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-calendar-muted">
+          Carregando pendências…
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-red-700">
-        Não foi possível carregar as pendências.
+      <div className="-m-4 flex h-full min-h-0 flex-1 flex-col sm:-m-6 md:-m-8">
+        <div className="flex flex-1 items-center justify-center rounded-3xl bg-gray-100 text-red-700">
+          Não foi possível carregar as pendências.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
-      <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
+    <div className="-m-4 flex h-full min-h-0 flex-1 flex-col sm:-m-6 md:-m-8">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
         <PendencyBoardHeader
-          urgencyFilter={urgencyFilter}
-          onUrgencyFilterChange={setUrgencyFilter}
+          urgencyFilters={urgencyFilters}
+          onUrgencyFiltersChange={setUrgencyFilters}
+          areaFilters={areaFilters}
+          onAreaFiltersChange={setAreaFilters}
+          projectFilters={projectFilters}
+          onProjectFiltersChange={setProjectFilters}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onCreateClick={openCreate}
@@ -276,7 +291,7 @@ export function PendencyBoard() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-4">
+          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden">
             {PENDENCY_STATUSES.map((status) => (
               <PendencyColumn
                 key={status}
@@ -308,6 +323,7 @@ export function PendencyBoard() {
           isSaving={isSaving}
         />
       </div>
+    </div>
     </div>
   );
 }

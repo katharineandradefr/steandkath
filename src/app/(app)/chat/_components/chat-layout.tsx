@@ -1,21 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { loadChatState, saveChatState } from "~/app/(app)/chat/_utils/chat-storage";
 import { api } from "~/trpc/react";
-import type { Conversation, Message, SubPanel } from "./chat-types";
+import type { Conversation, Message, SavedMessage, SubPanel } from "./chat-types";
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
 import { ConversationList } from "./conversation-list";
 import { ChatArea } from "./chat-area";
 import { OptionsPanel } from "./options-panel";
 
-/** Mensagem salva como favorita */
-export type SavedMessage = {
-  id: string;
-  senderName: string;
-  avatarColor: string;
-  initials: string;
-  preview: string;
+const DEFAULT_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
+  "4": INITIAL_MESSAGES,
 };
 
 /**
@@ -25,17 +21,51 @@ export type SavedMessage = {
 export function ChatLayout() {
   const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
   const [activeConversationId, setActiveConversationId] = useState("4");
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messagesByConversation, setMessagesByConversation] = useState<
+    Record<string, Message[]>
+  >(DEFAULT_MESSAGES_BY_CONVERSATION);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [activeSubPanel, setActiveSubPanel] = useState<SubPanel>(null);
   const [savedMessages, setSavedMessages] = useState<SavedMessage[]>([]);
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const [isReplying, setIsReplying] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const activeConversation =
     conversations.find((c) => c.id === activeConversationId) ?? conversations[0]!;
+  const messages = messagesByConversation[activeConversationId] ?? [];
 
   const replyMutation = api.chat.reply.useMutation();
+
+  useEffect(() => {
+    const loaded = loadChatState();
+    if (loaded) {
+      setMessagesByConversation(loaded.messagesByConversation);
+      setSavedMessages(loaded.savedMessages);
+      setFavoritedIds(new Set(loaded.favoritedIds));
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    saveChatState({
+      messagesByConversation,
+      savedMessages,
+      favoritedIds: [...favoritedIds],
+    });
+  }, [hydrated, messagesByConversation, savedMessages, favoritedIds]);
+
+  function setConversationMessages(
+    conversationId: string,
+    updater: (prev: Message[]) => Message[],
+  ) {
+    setMessagesByConversation((prev) => ({
+      ...prev,
+      [conversationId]: updater(prev[conversationId] ?? []),
+    }));
+  }
 
   function now() {
     return new Date().toLocaleTimeString("pt-BR", {
@@ -45,7 +75,10 @@ export function ChatLayout() {
   }
 
   async function handleSendMessage(text: string) {
-    setMessages((prev) => [
+    const conversationId = activeConversationId;
+    const currentMessages = messagesByConversation[conversationId] ?? [];
+
+    setConversationMessages(conversationId, (prev) => [
       ...prev,
       {
         id: `${Date.now()}`,
@@ -61,13 +94,13 @@ export function ChatLayout() {
       const result = await replyMutation.mutateAsync({
         message: text,
         senderName: activeConversation.name,
-        history: messages.slice(-10).map((m) => ({
+        history: currentMessages.slice(-10).map((m) => ({
           role: m.sender === "me" ? ("user" as const) : ("model" as const),
           text: m.text,
         })),
       });
 
-      setMessages((prev) => [
+      setConversationMessages(conversationId, (prev) => [
         ...prev,
         {
           id: `${Date.now() + 1}`,
@@ -83,7 +116,7 @@ export function ChatLayout() {
   }
 
   function handleSendImage(dataUrl: string) {
-    setMessages((prev) => [
+    setConversationMessages(activeConversationId, (prev) => [
       ...prev,
       {
         id: `${Date.now()}`,
@@ -157,7 +190,10 @@ export function ChatLayout() {
 
     setConversations((prev) => [newGroup, ...prev]);
     setActiveConversationId(newGroup.id);
-    setMessages([]);
+    setMessagesByConversation((prev) => ({
+      ...prev,
+      [newGroup.id]: [],
+    }));
   }
 
   return (

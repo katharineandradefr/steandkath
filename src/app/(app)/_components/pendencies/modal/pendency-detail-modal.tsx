@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 
 import {
   createEmptyPendencyDraft,
+  DEFAULT_AREA_KEY,
+  isPendencyAreaKey,
+  projectRequiresArea,
   stripHtmlToPlainText,
   type Pendency,
   type PendencyFormValues,
@@ -89,6 +92,13 @@ export function PendencyDetailModal({
       window.alert("Informe um título para a pendência.");
       return;
     }
+    if (
+      projectRequiresArea(draft.projectKey) &&
+      !isPendencyAreaKey(draft.areaKey)
+    ) {
+      window.alert("Escolha uma Grande área para este projeto.");
+      return;
+    }
     const plain = stripHtmlToPlainText(draft.descriptionMarkdown);
     const excerpt = plain.split("\n")[0]?.trim() ?? "";
     onSave({
@@ -120,8 +130,12 @@ export function PendencyDetailModal({
         <header className="shrink-0 border-b border-sidebar-border px-5 pt-5 pb-3">
           <div className="mb-4 flex items-start justify-between gap-3">
             <ModalTagsRow
+              areaKey={draft.areaKey}
               projectKey={draft.projectKey}
               urgency={draft.urgency}
+              onAreaChange={(areaKey) =>
+                patch({ areaKey: areaKey ?? DEFAULT_AREA_KEY })
+              }
               onProjectChange={(projectKey) => patch({ projectKey })}
               onUrgencyChange={(urgency) => patch({ urgency })}
             />

@@ -1,8 +1,5 @@
 import { goalOverlapsRange, parseGoalDate, type Goal } from "~/shared/goal";
-import {
-  PENDENCY_PROJECT_KEYS,
-  type PendencyProjectKey,
-} from "~/shared/pendency";
+import type { PendencyProjectKey } from "~/shared/pendency";
 
 export type CalendarCell = {
   date: Date;
@@ -12,10 +9,71 @@ export type CalendarCell = {
 };
 
 export type GoalBarSegment = {
+  goalId: string;
   projectKey: PendencyProjectKey;
+  lane: number;
   isStart: boolean;
   isEnd: boolean;
 };
+
+const MS_PER_DAY = 86_400_000;
+const GOAL_BAR_LANE_STEP_PX = 8;
+
+/**
+ * Retorna a duração da meta em dias (inclusivo).
+ */
+function getGoalDurationDays(goal: Goal): number {
+  const start = parseGoalDate(goal.startDate);
+  const end = parseGoalDate(goal.dueDate);
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
+}
+
+/**
+ * Verifica se duas metas se sobrepõem em pelo menos um dia.
+ */
+function goalsOverlap(a: Goal, b: Goal): boolean {
+  const bStart = parseGoalDate(b.startDate);
+  const bEnd = parseGoalDate(b.dueDate);
+  return goalOverlapsRange(a, bStart, bEnd);
+}
+
+/**
+ * Atribui faixa fixa por meta no mês: metas mais longas embaixo, novas/curtas por cima.
+ */
+export function assignGoalLanes(goals: Goal[]): Map<string, number> {
+  const sorted = [...goals].sort((a, b) => {
+    const durationDiff = getGoalDurationDays(b) - getGoalDurationDays(a);
+    if (durationDiff !== 0) return durationDiff;
+    return (
+      parseGoalDate(a.startDate).getTime() - parseGoalDate(b.startDate).getTime()
+    );
+  });
+
+  const lanes = new Map<string, number>();
+  const goalsByLane = new Map<number, Goal[]>();
+
+  for (const goal of sorted) {
+    let lane = 0;
+    while (true) {
+      const occupants = goalsByLane.get(lane) ?? [];
+      const overlaps = occupants.some((other) => goalsOverlap(goal, other));
+      if (!overlaps) break;
+      lane += 1;
+    }
+
+    lanes.set(goal.id, lane);
+    const next = goalsByLane.get(lane) ?? [];
+    next.push(goal);
+    goalsByLane.set(lane, next);
+  }
+
+  return lanes;
+}
+
+/** Altura em px da base de cada faixa de barra (barra + gap). */
+export function getGoalBarLaneBottomPx(lane: number): number {
+  return 8 + lane * GOAL_BAR_LANE_STEP_PX;
+}
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Quin", "Sex", "Sab"] as const;
 
@@ -133,34 +191,26 @@ export function buildCalendarGrid(year: number, month: number): CalendarCell[] {
 export function getGoalBarSegmentsForCell(
   cellDate: Date,
   goals: Goal[],
+  lanes: Map<string, number>,
 ): GoalBarSegment[] {
-  const byProject = new Map<
-    PendencyProjectKey,
-    { isStart: boolean; isEnd: boolean }
-  >();
+  const segments: GoalBarSegment[] = [];
 
   for (const goal of goals) {
     if (!goalOverlapsRange(goal, cellDate, cellDate)) continue;
 
     const start = parseGoalDate(goal.startDate);
     const end = parseGoalDate(goal.dueDate);
-    const existing = byProject.get(goal.projectKey);
-    const isStart = isSameUtcDay(cellDate, start);
-    const isEnd = isSameUtcDay(cellDate, end);
 
-    if (existing) {
-      existing.isStart = existing.isStart || isStart;
-      existing.isEnd = existing.isEnd || isEnd;
-    } else {
-      byProject.set(goal.projectKey, { isStart, isEnd });
-    }
+    segments.push({
+      goalId: goal.id,
+      projectKey: goal.projectKey,
+      lane: lanes.get(goal.id) ?? 0,
+      isStart: isSameUtcDay(cellDate, start),
+      isEnd: isSameUtcDay(cellDate, end),
+    });
   }
 
-  return PENDENCY_PROJECT_KEYS.flatMap((projectKey) => {
-    const segment = byProject.get(projectKey);
-    if (!segment) return [];
-    return [{ projectKey, ...segment }];
-  });
+  return segments.sort((a, b) => a.lane - b.lane);
 }
 
 /**
