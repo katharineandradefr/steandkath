@@ -18,6 +18,7 @@ import {
 import {
   USER_ROLE_LABELS,
   USER_ROLES,
+  showsProfileProjectsAndArea,
   type UserRole,
 } from "~/shared/user";
 import { api } from "~/trpc/react";
@@ -111,11 +112,14 @@ export function ProfileForm() {
     [],
   );
 
+  const showProjectsAndArea =
+    form.role !== null && showsProfileProjectsAndArea(form.role);
+
   const canSave =
     form.name.trim().length > 0 &&
     form.role !== null &&
     EMAIL_REGEX.test(form.email.trim()) &&
-    form.projects.length > 0 &&
+    (!showProjectsAndArea || form.projects.length > 0) &&
     !upsertMutation.isPending;
 
   const handleSave = () => {
@@ -129,8 +133,8 @@ export function ProfileForm() {
       role: form.role,
       email: form.email.trim(),
       phone: form.phone.trim() || null,
-      projects: form.projects,
-      area: form.area,
+      projects: showProjectsAndArea ? form.projects : [],
+      area: showProjectsAndArea ? form.area : null,
       photoBase64: form.photoBase64,
     });
   };
@@ -144,8 +148,9 @@ export function ProfileForm() {
   }
 
   return (
-    <div className="flex flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
-      <div className="flex flex-1 flex-col rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
+    <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-gray-100 shadow-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mb-4 flex justify-center">
           <AvatarUpload
             value={form.photoBase64}
@@ -174,30 +179,39 @@ export function ProfileForm() {
             />
           </div>
 
-          <MultiDropdown
-            label="Selecione de quais projetos participa:"
-            values={form.projects}
-            options={projectOptions}
-            onChange={(projects) =>
-              setForm((current) => ({
-                ...current,
-                projects: projects as PendencyProjectKey[],
-              }))
-            }
-          />
-
           <Dropdown
             label="Cargo"
             value={form.role}
             options={roleOptions}
             onChange={(role) =>
-              setForm((current) => ({
-                ...current,
-                role: role as UserRole,
-              }))
+              setForm((current) => {
+                const nextRole = role as UserRole;
+                const showFields = showsProfileProjectsAndArea(nextRole);
+
+                return {
+                  ...current,
+                  role: nextRole,
+                  projects: showFields ? current.projects : [],
+                  area: showFields ? current.area : null,
+                };
+              })
             }
             placeholder="Selecione o cargo"
           />
+
+          {showProjectsAndArea && (
+            <MultiDropdown
+              label="Selecione de quais projetos participa:"
+              values={form.projects}
+              options={projectOptions}
+              onChange={(projects) =>
+                setForm((current) => ({
+                  ...current,
+                  projects: projects as PendencyProjectKey[],
+                }))
+              }
+            />
+          )}
 
           <div>
             <label
@@ -236,36 +250,38 @@ export function ProfileForm() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <p className="mb-2 text-sm font-medium text-calendar-bordeaux">
-            Selecione a grande area:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {PENDENCY_AREA_KEYS.map((areaKey) => {
-              const selected = form.area === areaKey;
-              return (
-                <button
-                  key={areaKey}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      area: current.area === areaKey ? null : areaKey,
-                    }))
-                  }
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
-                    selected
-                      ? PENDENCY_AREA_BUTTON_SELECTED_STYLES[areaKey]
-                      : `${PENDENCY_AREA_BUTTON_STYLES[areaKey]} hover:brightness-95`
-                  }`}
-                >
-                  {PENDENCY_AREA_LABELS[areaKey]}
-                </button>
-              );
-            })}
+        {showProjectsAndArea && (
+          <div className="mt-6">
+            <p className="mb-2 text-sm font-medium text-calendar-bordeaux">
+              Selecione a grande area:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PENDENCY_AREA_KEYS.map((areaKey) => {
+                const selected = form.area === areaKey;
+                return (
+                  <button
+                    key={areaKey}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        area: current.area === areaKey ? null : areaKey,
+                      }))
+                    }
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+                      selected
+                        ? PENDENCY_AREA_BUTTON_SELECTED_STYLES[areaKey]
+                        : `${PENDENCY_AREA_BUTTON_STYLES[areaKey]} hover:brightness-95`
+                    }`}
+                  >
+                    {PENDENCY_AREA_LABELS[areaKey]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-6 flex flex-col items-end gap-2">
           {saveMessage && (
@@ -286,6 +302,7 @@ export function ProfileForm() {
           >
             {upsertMutation.isPending ? "Salvando…" : "Salvar"}
           </button>
+        </div>
         </div>
       </div>
     </div>

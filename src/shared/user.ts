@@ -20,6 +20,16 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   coordinator: "Cordenador Responsável",
 };
 
+/** Papéis de design — não declaram projetos nem grande área no perfil. */
+export function isDesignerRole(role: UserRole): boolean {
+  return role === "designer_1" || role === "designer";
+}
+
+/** Papéis de coordenação — exibem projetos e grande área no perfil. */
+export function showsProfileProjectsAndArea(role: UserRole): boolean {
+  return role === "coordinator" || role === "sub_coordinator";
+}
+
 export type User = {
   id: string;
   name: string;

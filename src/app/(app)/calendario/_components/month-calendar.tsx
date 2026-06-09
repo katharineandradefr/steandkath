@@ -104,13 +104,13 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
                   onDoubleClick={() => onActivateDay(cell.date)}
                   aria-pressed={isSelected}
                   aria-label={`Selecionar dia ${dayLabel}`}
-                  className={`relative min-h-0 w-full border border-gray-200 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-calendar-cardinal ${
+                  className={`calendar-day-cell relative min-h-0 w-full border border-gray-200 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-calendar-cardinal ${
                     isSelected
-                      ? "bg-red-200 hover:bg-red-200"
+                      ? "calendar-day-selected bg-red-200"
                       : isPast
-                        ? "bg-gray-50 hover:bg-calendar-cardinal/[0.05]"
-                        : "bg-white hover:bg-calendar-cardinal/[0.05]"
-                  } ${cell.isToday ? "ring-2 ring-inset ring-calendar-cardinal/50" : ""}`}
+                        ? "bg-gray-50"
+                        : "bg-white"
+                  } ${cell.isToday ? "calendar-day-today" : ""}`}
                 >
                   {cellContent}
                 </button>
@@ -120,8 +120,8 @@ const MonthBlock = forwardRef<HTMLDivElement, MonthBlockProps>(
             return (
               <div
                 key={cell.date.toISOString()}
-                className={`relative min-h-0 border border-gray-200 bg-calendar-muted/30 ${
-                  cell.isToday ? "ring-2 ring-inset ring-calendar-cardinal/50" : ""
+                className={`calendar-day-cell relative min-h-0 border border-gray-200 bg-calendar-muted/30 ${
+                  cell.isToday ? "calendar-day-today" : ""
                 }`}
               >
                 {cellContent}

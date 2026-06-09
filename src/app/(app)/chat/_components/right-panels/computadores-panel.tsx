@@ -17,7 +17,9 @@ export function ComputadoresPanel() {
         <div
           key={comp.id}
           className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-opacity hover:opacity-90 ${
-            comp.active ? "bg-[#be1525] text-white" : "bg-white/80 text-gray-700"
+            comp.active
+              ? "bg-[#be1525] text-white"
+              : "chat-subpanel-item rounded-lg text-gray-700"
           }`}
         >
           <Monitor className="h-4 w-4 shrink-0" />

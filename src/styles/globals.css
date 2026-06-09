@@ -157,3 +157,233 @@ html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder {
   color: #9ca3af !important;
 }
+
+/* --- Chat: painel direito (dark mode) --- */
+.chat-menu-action-btn {
+  background-color: rgb(255 255 255 / 0.92);
+  color: #1f2937;
+  transition: background-color 0.15s ease;
+}
+
+.chat-menu-action-btn:hover {
+  background-color: #ffffff;
+}
+
+.chat-menu-action-icon {
+  color: #5b0a0a;
+}
+
+html[data-theme="dark"] .chat-menu-action-btn {
+  background-color: #2a1418;
+  color: #f5f5f5;
+}
+
+html[data-theme="dark"] .chat-menu-action-btn:hover {
+  background-color: #3d2424;
+}
+
+html[data-theme="dark"] .chat-menu-action-icon {
+  color: #f5caca;
+}
+
+.chat-subpanel-surface {
+  background-color: #f3f4f6;
+}
+
+html[data-theme="dark"] .chat-subpanel-surface {
+  background-color: #1a1212;
+}
+
+.chat-subpanel-item {
+  background-color: rgb(255 255 255 / 0.85);
+}
+
+html[data-theme="dark"] .chat-subpanel-item {
+  background-color: #2a1418;
+  color: #f0f0f0 !important;
+}
+
+/* --- Pendências: colunas Kanban (dark mode) --- */
+html[data-theme="dark"] .pendency-col--pending {
+  background-color: #2d1218 !important;
+  border-color: #9b2335 !important;
+}
+
+html[data-theme="dark"] .pendency-col--pending .pendency-col-header {
+  border-color: #9b2335 !important;
+}
+
+html[data-theme="dark"] .pendency-col--pending .pendency-col-counter {
+  background-color: #5b0a0a !important;
+  color: #fecaca !important;
+}
+
+html[data-theme="dark"] .pendency-col--waiting {
+  background-color: #3d2814 !important;
+  border-color: #f97316 !important;
+}
+
+html[data-theme="dark"] .pendency-col--waiting .pendency-col-header {
+  border-color: #f97316 !important;
+}
+
+html[data-theme="dark"] .pendency-col--waiting .pendency-col-counter {
+  background-color: #9a3412 !important;
+  color: #fed7aa !important;
+}
+
+html[data-theme="dark"] .pendency-col--review {
+  background-color: #3d3514 !important;
+  border-color: #fbbf24 !important;
+}
+
+html[data-theme="dark"] .pendency-col--review .pendency-col-header {
+  border-color: #fbbf24 !important;
+}
+
+html[data-theme="dark"] .pendency-col--review .pendency-col-counter {
+  background-color: #854d0e !important;
+  color: #fef08a !important;
+}
+
+html[data-theme="dark"] .pendency-col--fixed {
+  background-color: #143d2a !important;
+  border-color: #34d399 !important;
+}
+
+html[data-theme="dark"] .pendency-col--fixed .pendency-col-header {
+  border-color: #34d399 !important;
+}
+
+html[data-theme="dark"] .pendency-col--fixed .pendency-col-counter {
+  background-color: #166534 !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .pendency-col--finished {
+  background-color: #262626 !important;
+  border-color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .pendency-col--finished .pendency-col-header {
+  border-color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .pendency-col--finished .pendency-col-counter {
+  background-color: #404040 !important;
+  color: #e5e5e5 !important;
+}
+
+/* --- Calendário: dias --- */
+.calendar-day-cell:hover {
+  background-color: rgb(226 38 60 / 0.05);
+}
+
+.calendar-day-selected:hover {
+  background-color: #fecaca;
+}
+
+html[data-theme="dark"] .calendar-day-cell:hover {
+  background-color: rgb(226 38 60 / 0.14) !important;
+}
+
+html[data-theme="dark"] .calendar-day-selected {
+  background-color: #5b0a0a !important;
+}
+
+html[data-theme="dark"] .calendar-day-selected:hover {
+  background-color: #6b1010 !important;
+}
+
+html[data-theme="dark"] .calendar-day-today {
+  background-color: #3d1418 !important;
+  box-shadow: inset 0 0 0 2px #9b2335;
+}
+
+/* --- FAQ / Perguntas Frequentes (dark mode) --- */
+html[data-theme="dark"] .faq-page-card {
+  background-color: #3d1418 !important;
+}
+
+html[data-theme="dark"] .faq-search-bar {
+  background-color: #2a1418 !important;
+  border: 1px solid #5b0a0a;
+}
+
+html[data-theme="dark"] .faq-search-input {
+  background-color: transparent !important;
+  color: #f5f5f5 !important;
+}
+
+html[data-theme="dark"] .faq-search-icon {
+  color: #f5caca !important;
+}
+
+.faq-item {
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.faq-item:hover {
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.1);
+  transform: translateY(-1px);
+}
+
+.faq-item:not(.faq-item--expanded):hover {
+  background-color: #fafafa;
+}
+
+html[data-theme="dark"] .faq-item {
+  background-color: #1a1212 !important;
+  border-left-color: #e2263c !important;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
+html[data-theme="dark"] .faq-item:hover {
+  background-color: #241818 !important;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.45);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .faq-item--expanded:hover {
+  background-color: #1a1212 !important;
+}
+
+html[data-theme="dark"] .faq-item-question {
+  color: #f5f5f5 !important;
+}
+
+html[data-theme="dark"] .faq-item-answer {
+  color: #d4d4d4 !important;
+}
+
+html[data-theme="dark"] .faq-item-chevron {
+  color: #f5caca !important;
+}
+
+.faq-footer-btn {
+  background-color: rgb(255 255 255 / 0.8);
+  color: #4b5563;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.faq-footer-btn:hover {
+  background-color: #ffffff;
+}
+
+html[data-theme="dark"] .faq-footer-btn {
+  background-color: #5b0a0a !important;
+  color: #f5f5f5 !important;
+}
+
+html[data-theme="dark"] .faq-footer-btn:hover {
+  background-color: #6b1010 !important;
+}
+
+html[data-theme="dark"] .faq-footer-btn:disabled {
+  background-color: #3d2424 !important;
+  color: #737373 !important;
+  opacity: 1;
+}

@@ -3,7 +3,12 @@
  * Fase 2: reutilizar estes tipos em schemas Zod e router tRPC.
  */
 
-export type PendencyStatus = "pending" | "in_review" | "fixed";
+export type PendencyStatus =
+  | "pending"
+  | "waiting_someone"
+  | "in_review"
+  | "fixed"
+  | "finished";
 
 export type PendencyUrgency = "low" | "medium" | "high";
 
@@ -105,8 +110,10 @@ export type Pendency = {
 
 export const PENDENCY_STATUSES: readonly PendencyStatus[] = [
   "pending",
+  "waiting_someone",
   "in_review",
   "fixed",
+  "finished",
 ] as const;
 
 export const PENDENCY_URGENCIES: readonly PendencyUrgency[] = [
@@ -194,8 +201,10 @@ export const PENDENCY_RECURRENCE_LABELS: Record<PendencyRecurrence, string> = {
 
 export const PENDENCY_STATUS_LABELS: Record<PendencyStatus, string> = {
   pending: "Pendente",
+  waiting_someone: "Aguardando alguém",
   in_review: "Em revisão",
   fixed: "Corrigido",
+  finished: "Finalizado",
 };
 
 export const PENDENCY_URGENCY_LABELS: Record<PendencyUrgency, string> = {
@@ -434,11 +443,9 @@ export function getPendencyCardExcerpt(pendency: Pendency): string | null {
 export function groupPendenciesByStatus(
   pendencies: Pendency[],
 ): Record<PendencyStatus, Pendency[]> {
-  const grouped: Record<PendencyStatus, Pendency[]> = {
-    pending: [],
-    in_review: [],
-    fixed: [],
-  };
+  const grouped = Object.fromEntries(
+    PENDENCY_STATUSES.map((status) => [status, [] as Pendency[]]),
+  ) as Record<PendencyStatus, Pendency[]>;
 
   for (const status of PENDENCY_STATUSES) {
     grouped[status] = pendencies

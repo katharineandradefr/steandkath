@@ -180,9 +180,9 @@ export function OptionsPanel({
                   key={id}
                   type="button"
                   onClick={() => onSubPanelChange(id)}
-                  className="flex items-center gap-3 rounded-lg bg-white/90 px-4 py-3 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-white"
+                  className="chat-menu-action-btn flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium shadow-sm"
                 >
-                  <Icon className="h-4 w-4 text-[#5B0A0A]" />
+                  <Icon className="chat-menu-action-icon h-4 w-4 shrink-0" />
                   {label}
                 </button>
               ))}

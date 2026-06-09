@@ -15,6 +15,7 @@ import {
 import {
   EXAMPLE_USER,
   USER_ROLES,
+  showsProfileProjectsAndArea,
   type User,
   type UserRole,
 } from "~/shared/user";
@@ -42,13 +43,21 @@ const userUpsertSchema = z.object({
   role: roleSchema,
   email: z.string().trim().email().max(320),
   phone: z.string().trim().max(30).nullable().optional(),
-  projects: z.array(projectKeySchema).min(1),
+  projects: z.array(projectKeySchema),
   area: areaKeySchema.nullable().optional(),
   photoBase64: z
     .string()
     .max(MAX_PHOTO_BASE64_LENGTH, "A foto excede o tamanho máximo permitido.")
     .nullable()
     .optional(),
+}).superRefine((data, ctx) => {
+  if (showsProfileProjectsAndArea(data.role) && data.projects.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Selecione ao menos um projeto.",
+      path: ["projects"],
+    });
+  }
 });
 
 /**

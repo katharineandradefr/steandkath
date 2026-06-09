@@ -48,8 +48,9 @@ export function SettingsPage() {
           : null;
 
   return (
-    <div className="flex flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
-      <div className="flex flex-1 flex-col rounded-3xl bg-gray-100 p-4 shadow-sm sm:p-6">
+    <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-gray-100 shadow-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <h1 className="text-2xl font-bold tracking-tight text-calendar-bordeaux sm:text-3xl">
           Configurações
         </h1>
@@ -80,7 +81,7 @@ export function SettingsPage() {
           })}
         </div>
 
-        <div className="mt-6 flex-1" role="tabpanel">
+        <div className="mt-6" role="tabpanel">
           {isLoading && (
             <p className="text-sm text-calendar-muted">Carregando…</p>
           )}
@@ -104,6 +105,7 @@ export function SettingsPage() {
           {!isLoading && !loadError && activeTab === "courses" && coursesQuery.data && (
             <CoursesPanel courses={coursesQuery.data} />
           )}
+        </div>
         </div>
       </div>
     </div>

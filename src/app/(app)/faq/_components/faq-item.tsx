@@ -23,8 +23,8 @@ type Props = {
 export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border-l-4 border-[#5B0A0A] bg-white transition-shadow ${
-        isExpanded ? "shadow-md" : "shadow-sm"
+      className={`faq-item overflow-hidden rounded-xl border-l-4 border-[#5B0A0A] bg-white ${
+        isExpanded ? "faq-item--expanded shadow-md" : "shadow-sm"
       }`}
     >
       <button
@@ -33,11 +33,11 @@ export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
         className="flex w-full items-center gap-4 px-5 py-4 text-left"
         aria-expanded={isExpanded}
       >
-        <p className="flex-1 text-sm font-medium text-gray-800">
+        <p className="faq-item-question flex-1 text-sm font-medium text-gray-800">
           {entry.question}
         </p>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-[#5B0A0A] transition-transform duration-300 ${
+          className={`faq-item-chevron h-4 w-4 shrink-0 text-[#5B0A0A] transition-transform duration-300 ${
             isExpanded ? "rotate-180" : ""
           }`}
         />
@@ -50,7 +50,9 @@ export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
         }`}
       >
         <div className="relative px-5 pb-5">
-          <p className="text-sm leading-relaxed text-gray-600">{entry.answer}</p>
+          <p className="faq-item-answer text-sm leading-relaxed text-gray-600">
+            {entry.answer}
+          </p>
 
           {/* Ícone de lápis — editar */}
           <button

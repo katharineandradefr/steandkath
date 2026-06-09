@@ -19,19 +19,29 @@ const STATUS_TINTS: Record<
   { section: string; header: string; counter: string }
 > = {
   pending: {
-    section: "border-red-300 bg-red-100",
-    header: "border-red-300",
-    counter: "bg-red-200 text-red-900",
+    section: "pendency-col pendency-col--pending border-red-300 bg-red-100",
+    header: "pendency-col-header border-red-300",
+    counter: "pendency-col-counter bg-red-200 text-red-900",
+  },
+  waiting_someone: {
+    section: "pendency-col pendency-col--waiting border-orange-300 bg-orange-100",
+    header: "pendency-col-header border-orange-300",
+    counter: "pendency-col-counter bg-orange-200 text-orange-900",
   },
   in_review: {
-    section: "border-amber-300 bg-amber-100",
-    header: "border-amber-300",
-    counter: "bg-amber-200 text-amber-900",
+    section: "pendency-col pendency-col--review border-amber-300 bg-amber-100",
+    header: "pendency-col-header border-amber-300",
+    counter: "pendency-col-counter bg-amber-200 text-amber-900",
   },
   fixed: {
-    section: "border-emerald-300 bg-emerald-100",
-    header: "border-emerald-300",
-    counter: "bg-emerald-200 text-emerald-900",
+    section: "pendency-col pendency-col--fixed border-emerald-300 bg-emerald-100",
+    header: "pendency-col-header border-emerald-300",
+    counter: "pendency-col-counter bg-emerald-200 text-emerald-900",
+  },
+  finished: {
+    section: "pendency-col pendency-col--finished border-gray-300 bg-gray-100",
+    header: "pendency-col-header border-gray-300",
+    counter: "pendency-col-counter bg-gray-200 text-gray-800",
   },
 };
 
@@ -43,7 +53,7 @@ type PendencyColumnProps = {
 };
 
 /**
- * Coluna Kanban para um status (Pendente, Em revisão, Corrigido).
+ * Coluna Kanban para um status de pendência.
  */
 export function PendencyColumn({
   status,

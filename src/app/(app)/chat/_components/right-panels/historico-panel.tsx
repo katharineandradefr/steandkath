@@ -117,7 +117,7 @@ export function HistoricoPanel() {
 
   return (
     <>
-      <div className="rounded-lg bg-[#f3f4f6]">
+      <div className="chat-subpanel-surface rounded-lg">
         <div className="flex flex-col divide-y divide-gray-200">
           {HISTORY_ENTRIES.map((entry) => (
             <div key={entry.id} className="flex items-start justify-between gap-2 px-3 py-2.5">

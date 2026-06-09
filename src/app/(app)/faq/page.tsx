@@ -103,7 +103,7 @@ export default function FaqPage() {
     <div className="flex flex-1 min-h-0 flex-col gap-4">
 
       {/* Card central — tamanho fixo com scroll interno */}
-      <div className="min-h-0 flex-1 overflow-hidden rounded-3xl bg-gray-300 shadow-xl">
+      <div className="faq-page-card min-h-0 flex-1 overflow-hidden rounded-3xl bg-gray-300 shadow-xl">
         {/* Área interna rolável */}
         <div className="h-full overflow-y-auto px-8 py-7">
           {/* Título */}
@@ -113,14 +113,14 @@ export default function FaqPage() {
 
           {/* Barra de pesquisa — estilo pílula, centralizada em ~2/3 */}
           <div className="mx-auto mb-6 w-full max-w-4xl">
-            <div className="flex items-center gap-2 rounded-full bg-gray-400/40 px-4 py-2.5">
-              <Search className="h-4 w-4 shrink-0 text-gray-600" />
+            <div className="faq-search-bar flex items-center gap-2 rounded-full bg-gray-400/40 px-4 py-2.5">
+              <Search className="faq-search-icon h-4 w-4 shrink-0 text-gray-600" />
               <input
                 type="text"
                 placeholder="Buscar pergunta..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500"
+                className="faq-search-input flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function FaqPage() {
           type="button"
           onClick={() => expandedId && setShowDeleteConfirm(true)}
           disabled={!expandedId}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white disabled:opacity-30"
+          className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white disabled:opacity-30"
           aria-label="Remover pergunta selecionada"
         >
           <Minus className="h-4 w-4" />
@@ -163,7 +163,7 @@ export default function FaqPage() {
         <button
           type="button"
           onClick={() => { setMode("add"); setExpandedId(null); }}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white"
+          className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white"
           aria-label="Adicionar nova pergunta"
         >
           <Plus className="h-4 w-4" />

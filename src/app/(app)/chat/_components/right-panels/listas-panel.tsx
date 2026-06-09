@@ -65,7 +65,7 @@ export function ListasPanel({ onSelectConversation }: Props) {
               expanded === course.id ? "max-h-40" : "max-h-0"
             }`}
           >
-            <div className="mt-1 flex flex-col gap-1 rounded-lg bg-white/85 p-2">
+            <div className="chat-subpanel-surface mt-1 flex flex-col gap-1 rounded-lg p-2">
               {course.users.length === 0 ? (
                 <p className="px-2 py-1 text-xs text-gray-500">
                   Nenhum usuário vinculado.

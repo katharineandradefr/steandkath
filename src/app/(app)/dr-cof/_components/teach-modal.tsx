@@ -17,27 +17,47 @@ export function TeachModal({ onClose }: Props) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: knowledge = [], refetch } = api.drCof.listKnowledge.useQuery();
+  const utils = api.useUtils();
+  const { data: knowledge = [] } = api.drCof.listKnowledge.useQuery();
   const addMutation = api.drCof.addKnowledge.useMutation();
   const deleteMutation = api.drCof.deleteKnowledge.useMutation();
 
   async function handleSave() {
     if (!title.trim() || !content.trim()) return;
     setSaving(true);
+    setFeedback(null);
+    setError(null);
     try {
-      await addMutation.mutateAsync({ title: title.trim(), content: content.trim() });
+      await addMutation.mutateAsync({
+        title: title.trim(),
+        content: content.trim(),
+      });
       setTitle("");
       setContent("");
-      await refetch();
+      setFeedback("Conhecimento salvo com sucesso.");
+      await utils.drCof.listKnowledge.invalidate();
+    } catch {
+      setError(
+        "Não foi possível salvar o conhecimento. Verifique se o banco de dados está configurado.",
+      );
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    await deleteMutation.mutateAsync({ id });
-    await refetch();
+    setFeedback(null);
+    setError(null);
+    try {
+      await deleteMutation.mutateAsync({ id });
+      setFeedback("Conhecimento removido.");
+      await utils.drCof.listKnowledge.invalidate();
+    } catch {
+      setError("Não foi possível excluir o conhecimento.");
+    }
   }
 
   return (
@@ -54,6 +74,17 @@ export function TeachModal({ onClose }: Props) {
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {feedback && (
+          <p role="status" className="text-sm text-emerald-700">
+            {feedback}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
 
         {/* Formulário */}
         <div className="flex flex-col gap-3">
