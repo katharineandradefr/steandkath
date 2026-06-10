@@ -1,68 +1,31 @@
+import { CHAT_CONTACTS } from "~/shared/chat-contacts";
+
 import type { Conversation, Message } from "./chat-types";
 
-export const CONVERSATIONS: Conversation[] = [
-  {
-    id: "1",
-    name: "Amirah Saleh",
-    initials: "AS",
-    avatarColor: "#d97706",
-    preview: "Helloo...",
-    unreadCount: 1,
-    online: true,
-    conversationStatus: "em-atendimento",
-  },
-  {
-    id: "2",
-    name: "Felipe Daiko",
-    initials: "FD",
-    avatarColor: "#7c3aed",
-    preview: "Helloo...",
-    online: false,
-  },
-  {
-    id: "3",
-    name: "Henrique Lunarderlli",
-    initials: "HL",
-    avatarColor: "#0891b2",
-    preview: "Helloo...",
-    online: true,
-    conversationStatus: "em-atendimento",
-  },
-  {
-    id: "4",
-    name: "Darizon Filho",
-    initials: "DF",
-    avatarColor: "#16a34a",
-    preview: "esse é um texto teste...",
-    online: true,
-  },
-  {
-    id: "5",
-    name: "Stefani Silva",
-    initials: "SS",
-    avatarColor: "#dc2626",
-    preview: "Helloo...",
-    unreadCount: 3,
-    online: false,
-    conversationStatus: "em-atendimento",
-  },
-  {
-    id: "6",
-    name: "Katharine Andrade",
-    initials: "KA",
-    avatarColor: "#be185d",
-    preview: "Helloo...",
-    online: true,
-  },
-  {
-    id: "7",
-    name: "Lucas Ferreira",
-    initials: "LF",
-    avatarColor: "#0369a1",
-    preview: "Helloo...",
-    online: false,
-  },
-];
+const CONVERSATION_DEFAULTS: Record<
+  string,
+  Partial<Pick<Conversation, "preview" | "unreadCount" | "online" | "conversationStatus" | "attendantName">>
+> = {
+  "1": { preview: "Helloo...", unreadCount: 1, online: true, conversationStatus: "em-atendimento", attendantName: "Stefani Silva" },
+  "2": { preview: "Helloo...", online: false },
+  "3": { preview: "Helloo...", online: true, conversationStatus: "em-atendimento", attendantName: "Stefani Silva" },
+  "4": { preview: "esse é um texto teste...", online: true },
+  "5": { preview: "Helloo...", unreadCount: 3, online: false, conversationStatus: "em-atendimento", attendantName: "Stefani Silva" },
+  "6": { preview: "Helloo...", online: true },
+  "7": { preview: "Helloo...", online: false },
+};
+
+export const CONVERSATIONS: Conversation[] = CHAT_CONTACTS.map((contact) => {
+  const defaults = CONVERSATION_DEFAULTS[contact.id] ?? { preview: "Helloo...", online: false };
+  return {
+    ...contact,
+    preview: defaults.preview ?? "Helloo...",
+    online: defaults.online ?? false,
+    unreadCount: defaults.unreadCount,
+    conversationStatus: defaults.conversationStatus,
+    attendantName: defaults.attendantName,
+  };
+});
 
 const LOREM_LONG =
   "esse é um texto teste para as mensagens, çôõô'p esse é um texto teste para as mensagens, çôõô'pesse é um texto teste para as mensagens, çôõô'pesse é um texto teste para as mensagens, çôõô'p";

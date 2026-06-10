@@ -3,10 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AppSidebar } from "~/app/_components/app-sidebar";
-import {
-  SIDEBAR_WIDTH_COLLAPSED_PX,
-  SIDEBAR_WIDTH_EXPANDED_PX,
-} from "~/app/_components/sidebar/sidebar-nav";
 
 const STORAGE_KEY = "sidebar-expanded";
 
@@ -40,16 +36,11 @@ export function AppShell({ children }: AppShellProps) {
     localStorage.setItem(STORAGE_KEY, "false");
   }, []);
 
-  const widthPx = expanded ? SIDEBAR_WIDTH_EXPANDED_PX : SIDEBAR_WIDTH_COLLAPSED_PX;
+  const isExpanded = hydrated && expanded;
 
   return (
     <div
-      className="h-screen overflow-hidden bg-linear-to-br from-shell-mid via-shell-warm to-shell text-white"
-      style={
-        hydrated
-          ? ({ "--sidebar-width": `${widthPx}px` } as React.CSSProperties)
-          : ({ "--sidebar-width": `${SIDEBAR_WIDTH_COLLAPSED_PX}px` } as React.CSSProperties)
-      }
+      className={`sidebar-sync h-screen overflow-hidden bg-linear-to-br from-shell-mid via-shell-warm to-shell text-white${isExpanded ? " sidebar-sync--expanded" : ""}`}
     >
       <AppSidebar expanded={expanded} onToggle={toggleExpanded} onMouseLeave={closeExpanded} />
 
@@ -62,7 +53,7 @@ export function AppShell({ children }: AppShellProps) {
         />
       )}
 
-      <div className="flex h-full min-h-0 min-w-0 flex-col pl-(--sidebar-width) transition-[padding] duration-300 ease-in-out">
+      <div className="flex h-full min-h-0 min-w-0 flex-col pl-(--sidebar-width)">
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 md:p-8">
           {children}
         </main>

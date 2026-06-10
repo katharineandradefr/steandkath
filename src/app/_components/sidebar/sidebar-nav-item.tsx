@@ -18,7 +18,7 @@ type SidebarNavItemProps = {
 };
 
 const itemBaseClass =
-  "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sidebar-icon transition-[transform,color,background-color] duration-200 ease-out hover:scale-105 hover:bg-sidebar-item-hover hover:text-sidebar-icon-hover active:text-sidebar-icon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-icon-active";
+  "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sidebar-icon transition-[color,background-color] duration-200 ease-out hover:bg-sidebar-item-hover hover:text-sidebar-icon-hover active:text-sidebar-icon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-icon-active";
 
 const itemActiveClass =
   "bg-sidebar-item-hover/40 text-sidebar-icon-active hover:text-sidebar-icon-active";
@@ -56,8 +56,10 @@ export function SidebarNavItem({
 
   const labelSlot = (
     <span
-      className={`truncate text-sm font-medium transition-opacity duration-200 ${
-        expanded ? "opacity-100" : "pointer-events-none w-0 overflow-hidden opacity-0"
+      className={`truncate text-sm font-medium overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-in-out ${
+        expanded
+          ? "max-w-36 opacity-100 delay-75"
+          : "pointer-events-none max-w-0 opacity-0 delay-0"
       }`}
     >
       {label}

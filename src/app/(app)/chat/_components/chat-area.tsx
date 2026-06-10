@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, X } from "lucide-react";
 
+import { usePendencyNavigation } from "~/app/_components/pendency-navigation-provider";
 import type { Conversation, Message } from "./chat-types";
 import { MessageInput } from "./message-input";
 import { MessageContextMenu } from "./message-context-menu";
@@ -61,6 +62,7 @@ export function ChatArea({
   onSendImage,
   onFavoriteMessage,
 }: Props) {
+  const { startNavigationToPendency } = usePendencyNavigation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -72,6 +74,11 @@ export function ChatArea({
   function handleMessageClick(e: React.MouseEvent, message: Message) {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, message });
+  }
+
+  function handleVerifyPendency(pendencyId: string) {
+    setContextMenu(null);
+    startNavigationToPendency(pendencyId);
   }
 
   return (
@@ -127,9 +134,33 @@ export function ChatArea({
                     msg.sender === "me"
                       ? "rounded-tr-sm bg-[#F1F1F1]"
                       : "rounded-tl-sm border border-gray-300 bg-[#E2E2E2]"
-                  } ${msg.imageUrl ? "overflow-hidden p-0" : "px-4 py-2.5"}`}
+                  } ${msg.pendencyTitle || msg.imageUrl ? "overflow-hidden" : "px-4 py-2.5"} ${
+                    msg.pendencyTitle ? "px-4 py-2.5" : msg.imageUrl ? "p-0" : ""
+                  }`}
                 >
-                  {msg.imageUrl ? (
+                  {msg.pendencyTitle ? (
+                    <div className="chat-pendency-msg flex flex-col gap-1.5">
+                      <p className="chat-pendency-msg-label text-xs font-semibold uppercase tracking-wide">
+                        Pendência
+                      </p>
+                      <p className="chat-pendency-msg-title font-semibold">
+                        {msg.pendencyTitle}
+                      </p>
+                      {msg.text && (
+                        <p className="chat-pendency-msg-body border-t border-gray-300/60 pt-1.5">
+                          {msg.text}
+                        </p>
+                      )}
+                      {msg.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={msg.imageUrl}
+                          alt="Imagem anexada à pendência"
+                          className="mt-1 max-h-60 w-full rounded-lg object-cover"
+                        />
+                      )}
+                    </div>
+                  ) : msg.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={msg.imageUrl}
@@ -184,6 +215,11 @@ export function ChatArea({
           onAmplify={
             contextMenu.message.imageUrl
               ? () => setLightboxSrc(contextMenu.message.imageUrl!)
+              : undefined
+          }
+          onVerifyPendency={
+            contextMenu.message.pendencyId
+              ? () => handleVerifyPendency(contextMenu.message.pendencyId!)
               : undefined
           }
         />

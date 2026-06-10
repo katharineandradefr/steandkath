@@ -43,29 +43,31 @@ export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
         />
       </button>
 
-      {/* Conteúdo expandido com animação */}
       <div
-        className={`overflow-hidden transition-all duration-300 ${
-          isExpanded ? "max-h-96" : "max-h-0"
+        className={`collapsible-section ${
+          isExpanded
+            ? "collapsible-section--expanded"
+            : "collapsible-section--collapsed"
         }`}
       >
-        <div className="relative px-5 pb-5">
-          <p className="faq-item-answer text-sm leading-relaxed text-gray-600">
-            {entry.answer}
-          </p>
+        <div className="collapsible-section-inner">
+          <div className="relative px-5 pb-5">
+            <p className="faq-item-answer text-sm leading-relaxed text-gray-600">
+              {entry.answer}
+            </p>
 
-          {/* Ícone de lápis — editar */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditClick();
-            }}
-            className="absolute right-4 bottom-2 text-gray-400 transition-colors hover:text-[#5B0A0A]"
-            aria-label="Editar pergunta"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditClick();
+              }}
+              className="absolute right-4 bottom-2 text-gray-400 transition-colors hover:text-[#5B0A0A]"
+              aria-label="Editar pergunta"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

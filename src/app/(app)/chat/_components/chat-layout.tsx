@@ -2,13 +2,25 @@
 
 import { useEffect, useState } from "react";
 
-import { loadChatState, saveChatState } from "~/app/(app)/chat/_utils/chat-storage";
+import {
+  loadChatState,
+  mergeChatConversations,
+  saveChatState,
+} from "~/app/(app)/chat/_utils/chat-storage";
 import { useUserPreferences } from "~/app/_components/user-preferences-provider";
 import { playMessageSound } from "~/shared/message-sound";
 import { showMessageNotification } from "~/shared/message-notifications";
 import { api } from "~/trpc/react";
-import type { Conversation, Message, SavedMessage, SubPanel } from "./chat-types";
+import type {
+  ChatHistoryEntry,
+  Conversation,
+  Message,
+  SavedMessage,
+  StatusValue,
+  SubPanel,
+} from "./chat-types";
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
+import { DEFAULT_HISTORY_ENTRIES } from "./right-panels/historico-panel";
 import { ConversationList } from "./conversation-list";
 import { ChatArea } from "./chat-area";
 import { OptionsPanel } from "./options-panel";
@@ -16,6 +28,15 @@ import { OptionsPanel } from "./options-panel";
 const DEFAULT_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
   "4": INITIAL_MESSAGES,
 };
+
+const DEFAULT_HISTORY_BY_CONVERSATION: Record<string, ChatHistoryEntry[]> = {
+  "4": DEFAULT_HISTORY_ENTRIES,
+};
+
+/** Formata data no padrão brasileiro (dd/mm/aaaa). */
+function formatHistoryDate(date: Date): string {
+  return date.toLocaleDateString("pt-BR");
+}
 
 /**
  * Orquestrador dos 3 painéis do chat: conversas, área principal e painel de opções.
@@ -31,6 +52,9 @@ export function ChatLayout() {
   const [activeSubPanel, setActiveSubPanel] = useState<SubPanel>(null);
   const [savedMessages, setSavedMessages] = useState<SavedMessage[]>([]);
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+  const [historyByConversation, setHistoryByConversation] = useState<
+    Record<string, ChatHistoryEntry[]>
+  >(DEFAULT_HISTORY_BY_CONVERSATION);
   const [isReplying, setIsReplying] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -39,7 +63,9 @@ export function ChatLayout() {
   const messages = messagesByConversation[activeConversationId] ?? [];
 
   const replyMutation = api.chat.reply.useMutation();
+  const { data: currentUser } = api.user.getFirst.useQuery();
   const { preferences } = useUserPreferences();
+  const senderName = currentUser?.name ?? "Usuário";
 
   function notifyIncomingMessage(senderName: string, text: string) {
     playMessageSound(preferences.messageSound);
@@ -55,6 +81,13 @@ export function ChatLayout() {
       setMessagesByConversation(loaded.messagesByConversation);
       setSavedMessages(loaded.savedMessages);
       setFavoritedIds(new Set(loaded.favoritedIds));
+      setConversations(mergeChatConversations(loaded.conversations));
+      if (loaded.historyByConversation) {
+        setHistoryByConversation({
+          ...DEFAULT_HISTORY_BY_CONVERSATION,
+          ...loaded.historyByConversation,
+        });
+      }
     }
     setHydrated(true);
   }, []);
@@ -66,8 +99,17 @@ export function ChatLayout() {
       messagesByConversation,
       savedMessages,
       favoritedIds: [...favoritedIds],
+      conversations,
+      historyByConversation,
     });
-  }, [hydrated, messagesByConversation, savedMessages, favoritedIds]);
+  }, [
+    hydrated,
+    messagesByConversation,
+    savedMessages,
+    favoritedIds,
+    conversations,
+    historyByConversation,
+  ]);
 
   function setConversationMessages(
     conversationId: string,
@@ -96,10 +138,23 @@ export function ChatLayout() {
         id: `${Date.now()}`,
         text,
         sender: "me",
-        senderName: "Katharine Andrade",
+        senderName,
         timestamp: now(),
       },
     ]);
+
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.id === conversationId
+          ? {
+              ...conversation,
+              conversationStatus: "em-atendimento",
+              attendantName: senderName,
+              preview: text.slice(0, 80),
+            }
+          : conversation,
+      ),
+    );
 
     setIsReplying(true);
     try {
@@ -139,7 +194,7 @@ export function ChatLayout() {
         text: "",
         imageUrl: dataUrl,
         sender: "me",
-        senderName: "Katharine Andrade",
+        senderName,
         timestamp: now(),
       },
     ]);
@@ -157,7 +212,9 @@ export function ChatLayout() {
           .slice(0, 2)
           .map((w) => w[0])
           .join("") ?? "?",
-      preview: message.imageUrl ? "📷 Imagem" : message.text.slice(0, 60),
+      preview: message.imageUrl
+        ? "📷 Imagem"
+        : message.pendencyTitle ?? message.text.slice(0, 60),
     };
     setSavedMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
@@ -177,6 +234,57 @@ export function ChatLayout() {
     setActiveConversationId(id);
     setActiveSubPanel(null);
     setRightPanelOpen(false);
+  }
+
+  function handleConversationStatusChange(status: StatusValue) {
+    const conversationId = activeConversationId;
+    const active = conversations.find((c) => c.id === conversationId);
+
+    if (status === "finalizado") {
+      const attendant = active?.attendantName ?? senderName;
+      const images = (messagesByConversation[conversationId] ?? [])
+        .map((message) => message.imageUrl)
+        .filter((url): url is string => Boolean(url));
+
+      const newEntry: ChatHistoryEntry = {
+        id: `${Date.now()}`,
+        date: formatHistoryDate(new Date()),
+        status: "Atendimento Finalizado",
+        user: attendant,
+        ...(images.length > 0 ? { images } : {}),
+      };
+
+      setHistoryByConversation((prev) => ({
+        ...prev,
+        [conversationId]: [newEntry, ...(prev[conversationId] ?? [])],
+      }));
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                conversationStatus: "sem-atendimento",
+                attendantName: undefined,
+              }
+            : conversation,
+        ),
+      );
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.id === conversationId
+          ? {
+              ...conversation,
+              conversationStatus: status,
+              attendantName:
+                status === "em-atendimento" ? senderName : undefined,
+            }
+          : conversation,
+      ),
+    );
   }
 
   function handleCreateGroup(name: string, memberIds: string[]) {
@@ -214,7 +322,7 @@ export function ChatLayout() {
 
   return (
     /* Posicionamento fixed para ocupar toda a altura disponível sem fazer a página rolar */
-    <div className="fixed inset-y-0 right-0 left-0 flex overflow-hidden bg-[#D9D9D9] pl-(--sidebar-width)">
+    <div className="sidebar-content-offset fixed inset-y-0 right-0 flex overflow-hidden bg-[#D9D9D9]">
       <ConversationList
         conversations={conversations}
         activeId={activeConversationId}
@@ -235,6 +343,10 @@ export function ChatLayout() {
         open={rightPanelOpen}
         activeSubPanel={activeSubPanel}
         savedMessages={savedMessages}
+        historyEntries={historyByConversation[activeConversationId] ?? []}
+        attendantName={activeConversation.attendantName}
+        conversationStatus={activeConversation.conversationStatus}
+        onStatusChange={handleConversationStatusChange}
         onSubPanelChange={setActiveSubPanel}
         onSelectConversation={handleSelectConversationFromList}
         onCreateGroup={handleCreateGroup}

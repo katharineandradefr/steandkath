@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bookmark, Copy, Expand, X } from "lucide-react";
+import { Bookmark, ClipboardList, Copy, Expand, X } from "lucide-react";
 
 type Props = {
   x: number;
@@ -10,6 +10,7 @@ type Props = {
   onCopy: () => void;
   onClose: () => void;
   onAmplify?: () => void;
+  onVerifyPendency?: () => void;
 };
 
 /**
@@ -17,7 +18,15 @@ type Props = {
  * Fecha ao clicar fora ou pressionar Escape.
  * Exibe "Ampliar imagem" apenas quando onAmplify for fornecido (mensagens com imagem).
  */
-export function MessageContextMenu({ x, y, onFavorite, onCopy, onClose, onAmplify }: Props) {
+export function MessageContextMenu({
+  x,
+  y,
+  onFavorite,
+  onCopy,
+  onClose,
+  onAmplify,
+  onVerifyPendency,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,10 +47,12 @@ export function MessageContextMenu({ x, y, onFavorite, onCopy, onClose, onAmplif
   }, [onClose]);
 
   /* Garante que o menu não saia da tela */
+  const menuHeight = onVerifyPendency ? 220 : 160;
+
   const menuStyle: React.CSSProperties = {
     position: "fixed",
-    top: Math.min(y, window.innerHeight - 160),
-    left: Math.min(x, window.innerWidth - 200),
+    top: Math.min(y, window.innerHeight - menuHeight),
+    left: Math.min(x, window.innerWidth - 220),
     zIndex: 50,
   };
 
@@ -49,48 +60,62 @@ export function MessageContextMenu({ x, y, onFavorite, onCopy, onClose, onAmplif
     <div
       ref={ref}
       style={menuStyle}
-      className="flex flex-col overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
+      className="chat-msg-menu flex flex-col overflow-hidden rounded-xl shadow-xl"
     >
       <button
         type="button"
         onClick={() => { onFavorite(); onClose(); }}
-        className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+        className="chat-msg-menu-item flex items-center gap-2.5 px-4 py-3 text-sm"
       >
-        <Bookmark className="h-4 w-4 text-[#5B0A0A]" />
+        <Bookmark className="chat-msg-menu-icon h-4 w-4" aria-hidden />
         Favoritar mensagem
       </button>
 
+      {onVerifyPendency && (
+        <>
+          <div className="chat-msg-menu-divider mx-3 border-t" />
+          <button
+            type="button"
+            onClick={() => { onVerifyPendency(); onClose(); }}
+            className="chat-msg-menu-item flex items-center gap-2.5 px-4 py-3 text-sm"
+          >
+            <ClipboardList className="chat-msg-menu-icon h-4 w-4" aria-hidden />
+            Verificar pendência
+          </button>
+        </>
+      )}
+
       {onAmplify && (
         <>
-          <div className="mx-3 border-t border-gray-100" />
+          <div className="chat-msg-menu-divider mx-3 border-t" />
           <button
             type="button"
             onClick={() => { onAmplify(); onClose(); }}
-            className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            className="chat-msg-menu-item flex items-center gap-2.5 px-4 py-3 text-sm"
           >
-            <Expand className="h-4 w-4 text-[#5B0A0A]" />
+            <Expand className="chat-msg-menu-icon h-4 w-4" aria-hidden />
             Ampliar imagem
           </button>
         </>
       )}
 
-      <div className="mx-3 border-t border-gray-100" />
+      <div className="chat-msg-menu-divider mx-3 border-t" />
       <button
         type="button"
         onClick={() => { onCopy(); onClose(); }}
-        className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+        className="chat-msg-menu-item flex items-center gap-2.5 px-4 py-3 text-sm"
       >
-        <Copy className="h-4 w-4 text-[#5B0A0A]" />
+        <Copy className="chat-msg-menu-icon h-4 w-4" aria-hidden />
         Copiar mensagem
       </button>
 
-      <div className="mx-3 border-t border-gray-100" />
+      <div className="chat-msg-menu-divider mx-3 border-t" />
       <button
         type="button"
         onClick={onClose}
-        className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-400 transition-colors hover:bg-gray-50"
+        className="chat-msg-menu-item chat-msg-menu-item--muted flex items-center gap-2.5 px-4 py-3 text-sm"
       >
-        <X className="h-4 w-4" />
+        <X className="h-4 w-4" aria-hidden />
         Fechar
       </button>
     </div>

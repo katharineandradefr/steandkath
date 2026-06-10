@@ -1,18 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Paperclip, X } from "lucide-react";
 
-type HistoryEntry = {
-  id: string;
-  date: string;
-  status: string;
-  user: string;
-  images?: string[];
-};
+import type { ChatHistoryEntry } from "~/app/(app)/chat/_components/chat-types";
 
-/* Imagens de placeholder via picsum — 1 entrada com 1 imagem, 1 com várias */
-const HISTORY_ENTRIES: HistoryEntry[] = [
+/* Histórico inicial de exemplo para a conversa padrão */
+export const DEFAULT_HISTORY_ENTRIES: ChatHistoryEntry[] = [
   {
     id: "1",
     date: "22/05/2026",
@@ -70,9 +65,34 @@ type ImageViewerProps = {
 
 /** Modal para visualizar as imagens do histórico de uma conversa */
 function ImageViewer({ images, onClose }: ImageViewerProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-white p-5 shadow-2xl">
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="app-overlay-modal fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Imagens do histórico"
+      onClick={onClose}
+    >
+      <div
+        className="app-overlay-modal-card relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-white p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">
             {images.length === 1 ? "1 imagem" : `${images.length} imagens`} encaminhadas
@@ -104,22 +124,32 @@ function ImageViewer({ images, onClose }: ImageViewerProps) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
+
+type Props = {
+  entries: ChatHistoryEntry[];
+};
 
 /**
  * Sub-painel: histórico de atendimentos com data, usuário e visualizador de imagens.
  * Entradas com imagens exibem ícone de clip clicável.
  */
-export function HistoricoPanel() {
+export function HistoricoPanel({ entries }: Props) {
   const [viewerImages, setViewerImages] = useState<string[] | null>(null);
 
   return (
     <>
       <div className="chat-subpanel-surface rounded-lg">
         <div className="flex flex-col divide-y divide-gray-200">
-          {HISTORY_ENTRIES.map((entry) => (
+          {entries.length === 0 && (
+            <p className="px-3 py-4 text-center text-xs text-gray-500">
+              Nenhum atendimento finalizado ainda.
+            </p>
+          )}
+          {entries.map((entry) => (
             <div key={entry.id} className="flex items-start justify-between gap-2 px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-gray-700">{entry.date}</p>

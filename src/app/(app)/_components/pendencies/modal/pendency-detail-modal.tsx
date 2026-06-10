@@ -16,6 +16,7 @@ import {
 import { DescriptionRichEditor } from "~/app/(app)/calendario/_components/description-rich-editor";
 import { ModalAttachments } from "./modal-attachments";
 import { ModalChecklist } from "./modal-checklist";
+import { ModalDirectResponsible } from "./modal-direct-responsible";
 import { ModalLinks } from "./modal-links";
 import { ModalTagsRow } from "./modal-tags-row";
 import { ModalTitleField } from "./modal-title-field";
@@ -121,12 +122,12 @@ export function PendencyDetailModal({
     >
       <button
         type="button"
-        className="fixed inset-0 bg-black/60"
+        className="pendency-modal-backdrop fixed inset-0 bg-black/60"
         aria-label="Fechar modal"
         onClick={onClose}
       />
 
-      <div className="relative z-10 my-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-sidebar-border bg-shell-mid shadow-2xl">
+      <div className="pendency-modal-card relative z-10 my-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-sidebar-border bg-shell-mid shadow-2xl">
         <header className="shrink-0 border-b border-sidebar-border px-5 pt-5 pb-3">
           <div className="mb-4 flex items-start justify-between gap-3">
             <ModalTagsRow
@@ -160,6 +161,16 @@ export function PendencyDetailModal({
         </header>
 
         <div className="flex-1 space-y-0 overflow-y-auto px-5">
+          <ModalDirectResponsible
+            directResponsibleId={draft.directResponsibleId ?? null}
+            pendencyTitle={draft.title}
+            pendencyId={mode === "edit" ? draft.id : undefined}
+            attachments={draft.attachments}
+            onDirectResponsibleChange={(directResponsibleId) =>
+              patch({ directResponsibleId })
+            }
+          />
+
           <section className="border-t border-sidebar-border pt-5">
             <div className="mb-3 flex items-center gap-2">
               <LinesIcon />

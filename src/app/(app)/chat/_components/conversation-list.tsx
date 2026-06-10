@@ -50,7 +50,11 @@ function ConversationItem({
         <ConversationAvatar conv={conv} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-gray-800">{conv.name}</p>
-          <p className="truncate text-xs text-gray-500">{conv.preview}</p>
+          <p className="truncate text-xs text-gray-500">
+            {conv.conversationStatus === "em-atendimento" && conv.attendantName
+              ? `${conv.attendantName} · ${conv.preview}`
+              : conv.preview}
+          </p>
         </div>
         {!!conv.unreadCount && (
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
@@ -142,21 +146,32 @@ export function ConversationList({ conversations, activeId, onSelect }: Props) {
                   {atendimento.length}
                 </span>
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-[#5B0A0A] transition-transform duration-200 ${
+                  className={`h-3.5 w-3.5 text-[#5B0A0A] transition-transform duration-300 ease-in-out ${
                     atendimentoCollapsed ? "-rotate-90" : ""
                   }`}
                 />
               </button>
             </li>
-            {!atendimentoCollapsed &&
-              atendimento.map((conv) => (
-                <ConversationItem
-                  key={conv.id}
-                  conv={conv}
-                  isActive={activeId === conv.id}
-                  onSelect={() => onSelect(conv.id)}
-                />
-              ))}
+            <li>
+              <div
+                className={`collapsible-section ${
+                  atendimentoCollapsed
+                    ? "collapsible-section--collapsed"
+                    : "collapsible-section--expanded"
+                }`}
+              >
+                <ul className="collapsible-section-inner">
+                  {atendimento.map((conv) => (
+                    <ConversationItem
+                      key={conv.id}
+                      conv={conv}
+                      isActive={activeId === conv.id}
+                      onSelect={() => onSelect(conv.id)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            </li>
           </>
         )}
 

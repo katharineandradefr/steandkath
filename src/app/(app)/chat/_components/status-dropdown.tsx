@@ -26,7 +26,7 @@ type Props = {
 };
 
 /**
- * Dropdown de status de atendimento com cores distintas por opção e animação suave.
+ * Dropdown de status de atendimento com cores distintas por opção.
  */
 export function StatusDropdown({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
@@ -40,7 +40,7 @@ export function StatusDropdown({ value, onChange }: Props) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"
+        className="chat-status-option flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium"
         style={{ backgroundColor: current.bg, color: current.text }}
       >
         {current.label}
@@ -49,7 +49,6 @@ export function StatusDropdown({ value, onChange }: Props) {
         />
       </button>
 
-      {/* Lista de opções */}
       <div
         className={`absolute top-full left-0 right-0 z-20 mt-1 flex flex-col overflow-hidden rounded-lg shadow-xl transition-all duration-200 ${
           open ? "max-h-72 opacity-100" : "max-h-0 opacity-0"
@@ -63,7 +62,7 @@ export function StatusDropdown({ value, onChange }: Props) {
               onChange(opt.value);
               setOpen(false);
             }}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-opacity hover:opacity-80"
+            className="chat-status-option flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
             style={{ backgroundColor: opt.bg, color: opt.text }}
           >
             {opt.label}

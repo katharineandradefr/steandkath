@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { List, BookmarkCheck, Monitor, History, ChevronLeft, Users } from "lucide-react";
 
-import type { SubPanel, StatusValue } from "./chat-types";
+import type { ChatHistoryEntry, SubPanel, StatusValue } from "./chat-types";
 import type { SavedMessage } from "./chat-types";
 import { CONVERSATIONS } from "./chat-data";
 import { StatusDropdown } from "./status-dropdown";
@@ -16,6 +16,10 @@ type Props = {
   open: boolean;
   activeSubPanel: SubPanel;
   savedMessages: SavedMessage[];
+  historyEntries: ChatHistoryEntry[];
+  attendantName?: string;
+  conversationStatus?: StatusValue;
+  onStatusChange: (status: StatusValue) => void;
   onSubPanelChange: (panel: SubPanel) => void;
   onSelectConversation: (id: string) => void;
   onCreateGroup: (name: string, memberIds: string[]) => void;
@@ -27,6 +31,8 @@ const ACTION_BUTTONS = [
   { id: "computadores" as const, label: "Computadores", icon: Monitor },
   { id: "historico" as const, label: "Histórico", icon: History },
 ];
+
+const PANEL_SLIDE_MS = 280;
 
 type GroupModalProps = {
   onClose: () => void;
@@ -122,82 +128,140 @@ export function OptionsPanel({
   open,
   activeSubPanel,
   savedMessages,
+  historyEntries,
+  attendantName,
+  conversationStatus,
+  onStatusChange,
   onSubPanelChange,
   onSelectConversation,
   onCreateGroup,
 }: Props) {
-  const [status, setStatus] = useState<StatusValue>("em-atendimento");
+  const slideTimerRef = useRef<number | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [displayedSubPanel, setDisplayedSubPanel] = useState<SubPanel>(null);
+  const status = conversationStatus ?? "sem-atendimento";
+  const showAttendant = status === "em-atendimento" && Boolean(attendantName);
+  const isSubPanel = activeSubPanel !== null;
+
+  const clearSlideTimer = () => {
+    if (slideTimerRef.current !== null) {
+      window.clearTimeout(slideTimerRef.current);
+      slideTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (activeSubPanel) {
+      clearSlideTimer();
+      setDisplayedSubPanel(activeSubPanel);
+      return;
+    }
+
+    clearSlideTimer();
+    slideTimerRef.current = window.setTimeout(() => {
+      setDisplayedSubPanel(null);
+      slideTimerRef.current = null;
+    }, PANEL_SLIDE_MS);
+  }, [activeSubPanel]);
+
+  useEffect(() => () => clearSlideTimer(), []);
+
+  const openSubPanel = (panel: Exclude<SubPanel, null>) => {
+    clearSlideTimer();
+    onSubPanelChange(panel);
+    setDisplayedSubPanel(panel);
+  };
+
+  const goBackToMenu = () => {
+    onSubPanelChange(null);
+  };
+
+  const subPanelLabel =
+    displayedSubPanel &&
+    ACTION_BUTTONS.find((button) => button.id === displayedSubPanel)?.label;
 
   return (
     <>
       <aside
-        className={`flex shrink-0 flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`chat-options-aside flex shrink-0 flex-col overflow-hidden ${
           open ? "w-72" : "w-0"
         }`}
         style={{ backgroundColor: "rgba(255, 0, 24, 0.5)" }}
       >
         <div className="flex w-72 flex-1 flex-col gap-4 overflow-y-auto p-4">
-          {/* Status dropdown */}
-          <StatusDropdown value={status} onChange={setStatus} />
-
-          {/* Nome — visível apenas em "Em Atendimento" */}
-          <div
-            className={`overflow-hidden transition-all duration-200 ${
-              status === "em-atendimento"
-                ? "max-h-10 opacity-100"
-                : "max-h-0 opacity-0"
-            }`}
-          >
-            <p className="text-sm font-medium text-white">Stefani Silva</p>
+          <div className="flex flex-col gap-1.5">
+            <StatusDropdown value={status} onChange={onStatusChange} />
+            <div
+              className={`collapsible-section ${
+                showAttendant
+                  ? "collapsible-section--expanded"
+                  : "collapsible-section--collapsed"
+              }`}
+            >
+              <p className="collapsible-section-inner px-1 text-sm font-medium text-white">
+                {attendantName}
+              </p>
+            </div>
           </div>
 
-          {/* Sub-painel ativo ou lista de botões */}
-          {activeSubPanel ? (
-            <div className="flex flex-1 flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => onSubPanelChange(null)}
-                className="flex items-center gap-1 self-start text-xs text-white/80 transition-colors hover:text-white"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                Voltar
-              </button>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <div
+              className={`chat-options-panels flex h-full w-[200%] ${
+                isSubPanel
+                  ? "chat-options-panels--subpanel"
+                  : "chat-options-panels--root"
+              }`}
+            >
+              <div className="flex w-1/2 shrink-0 flex-col gap-2">
+                {ACTION_BUTTONS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => openSubPanel(id)}
+                    className="chat-menu-action-btn flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium shadow-sm"
+                  >
+                    <Icon className="chat-menu-action-icon h-4 w-4 shrink-0" />
+                    {label}
+                  </button>
+                ))}
 
-              {activeSubPanel === "computadores" && <ComputadoresPanel />}
-              {activeSubPanel === "listas" && (
-                <ListasPanel onSelectConversation={onSelectConversation} />
-              )}
-              {activeSubPanel === "mensagens-salvas" && (
-                <MensagensSalvasPanel messages={savedMessages} />
-              )}
-              {activeSubPanel === "historico" && <HistoricoPanel />}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {ACTION_BUTTONS.map(({ id, label, icon: Icon }) => (
                 <button
-                  key={id}
                   type="button"
-                  onClick={() => onSubPanelChange(id)}
-                  className="chat-menu-action-btn flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium shadow-sm"
+                  onClick={() => setShowCreateGroup(true)}
+                  className="chat-create-group-btn flex items-center gap-3 rounded-lg border border-white/40 bg-white/20 px-4 py-3 text-sm font-medium text-white shadow-sm"
                 >
-                  <Icon className="chat-menu-action-icon h-4 w-4 shrink-0" />
-                  {label}
+                  <Users className="h-4 w-4" />
+                  Criar grupo
                 </button>
-              ))}
+              </div>
 
-              {/* Criar grupo — no final da lista */}
-              <button
-                type="button"
-                onClick={() => setShowCreateGroup(true)}
-                className="flex items-center gap-3 rounded-lg border border-white/40 bg-white/20 px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-white/30"
-              >
-                <Users className="h-4 w-4" />
-                Criar grupo
-              </button>
+              <div className="flex w-1/2 shrink-0 flex-col gap-3 overflow-y-auto">
+                {displayedSubPanel && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={goBackToMenu}
+                      className="flex items-center gap-1 self-start text-xs text-white/80 transition-colors hover:text-white"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      {subPanelLabel ?? "Voltar"}
+                    </button>
+
+                    {displayedSubPanel === "computadores" && <ComputadoresPanel />}
+                    {displayedSubPanel === "listas" && (
+                      <ListasPanel onSelectConversation={onSelectConversation} />
+                    )}
+                    {displayedSubPanel === "mensagens-salvas" && (
+                      <MensagensSalvasPanel messages={savedMessages} />
+                    )}
+                    {displayedSubPanel === "historico" && (
+                      <HistoricoPanel entries={historyEntries} />
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </aside>
 

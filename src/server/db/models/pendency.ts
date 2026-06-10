@@ -80,6 +80,7 @@ const pendencySchema = new Schema(
       default: null,
     },
     professorResponsible: { type: String, default: null },
+    directResponsibleId: { type: String, default: null },
     dueDate: { type: Date, default: null, index: true },
     recurrence: {
       type: String,

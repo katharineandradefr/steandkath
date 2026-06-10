@@ -10,7 +10,8 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   DEFAULT_AREA_KEY,
@@ -27,6 +28,7 @@ import {
   type PendencyProjectKey,
   type PendencyUrgency,
 } from "~/shared/pendency";
+import { usePendencyNavigation } from "~/app/_components/pendency-navigation-provider";
 import { api } from "~/trpc/react";
 
 import { PendencyDetailModal } from "./modal/pendency-detail-modal";
@@ -50,6 +52,10 @@ function buildReorderMoves(pendencies: Pendency[]) {
  * Board Kanban de pendências com persistência MongoDB via tRPC.
  */
 export function PendencyBoard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isNavigating, completeNavigation } = usePendencyNavigation();
+  const openedFromUrlRef = useRef<string | null>(null);
   const utils = api.useUtils();
   const [urgencyFilters, setUrgencyFilters] = useState<PendencyUrgency[]>([]);
   const [areaFilters, setAreaFilters] = useState<PendencyAreaKey[]>([]);
@@ -88,6 +94,7 @@ export function PendencyBoard() {
         attachments: [],
         links: input.links ?? [],
         checklist: input.checklist ?? [],
+        directResponsibleId: input.directResponsibleId ?? null,
         createdAt: now,
         updatedAt: now,
       };
@@ -128,11 +135,18 @@ export function PendencyBoard() {
             urgency: patch.urgency ?? p.urgency,
             links: patch.links ?? p.links,
             checklist: patch.checklist ?? p.checklist,
+            directResponsibleId:
+              patch.directResponsibleId !== undefined
+                ? patch.directResponsibleId
+                : p.directResponsibleId,
             updatedAt: new Date().toISOString(),
           };
         }),
       );
       return { previous };
+    },
+    onSuccess: (saved, { id }) => {
+      setListCache((prev) => prev.map((p) => (p.id === id ? saved : p)));
     },
     onError: (_err, _input, context) => {
       utils.pendency.list.setData(listInput, context?.previous);
@@ -200,6 +214,43 @@ export function PendencyBoard() {
     setModalOpen(true);
   };
 
+  const pendenciaFromUrl = searchParams.get("pendencia");
+
+  useEffect(() => {
+    if (!pendenciaFromUrl || isLoading || pendencies.length === 0) return;
+    if (openedFromUrlRef.current === pendenciaFromUrl) return;
+
+    const pendency = pendencies.find((item) => item.id === pendenciaFromUrl);
+    if (!pendency) return;
+
+    openedFromUrlRef.current = pendenciaFromUrl;
+    setModalMode("edit");
+    setEditingPendency(pendency);
+    setModalOpen(true);
+    router.replace("/", { scroll: false });
+  }, [pendenciaFromUrl, isLoading, pendencies, router]);
+
+  useEffect(() => {
+    if (!isNavigating || !modalOpen || !openedFromUrlRef.current) return;
+    completeNavigation();
+  }, [isNavigating, modalOpen, completeNavigation]);
+
+  useEffect(() => {
+    if (!isNavigating || isLoading || !pendenciaFromUrl) return;
+    if (pendencies.length === 0) return;
+
+    const pendency = pendencies.find((item) => item.id === pendenciaFromUrl);
+    if (!pendency && openedFromUrlRef.current !== pendenciaFromUrl) {
+      completeNavigation();
+    }
+  }, [
+    completeNavigation,
+    isLoading,
+    isNavigating,
+    pendenciaFromUrl,
+    pendencies,
+  ]);
+
   const handleSave = (values: PendencyFormValues) => {
     const payload = {
       areaKey: values.areaKey,
@@ -210,6 +261,7 @@ export function PendencyBoard() {
       links: values.links,
       checklist: values.checklist,
       attachments: values.attachments,
+      directResponsibleId: values.directResponsibleId ?? null,
     };
 
     if (modalMode === "create") {

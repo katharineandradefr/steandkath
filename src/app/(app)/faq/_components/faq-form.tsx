@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Minus } from "lucide-react";
 
 import { FaqConfirmDialog } from "./faq-confirm-dialog";
@@ -28,9 +29,14 @@ export function FaqForm({
   onSave,
   onCancel,
 }: Props) {
+  const [mounted, setMounted] = useState(false);
   const [question, setQuestion] = useState(initialQuestion);
   const [answer, setAnswer] = useState(initialAnswer);
   const [confirming, setConfirming] = useState<ConfirmType>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const hasContent = question.trim() || answer.trim();
   const isEdit = mode === "edit";
@@ -72,20 +78,23 @@ export function FaqForm({
         ? "Realmente deseja cancelar alterações aplicadas?"
         : "Realmente deseja cancelar o registro dessa pergunta frequente?";
 
+  if (!mounted) return null;
+
   /* Diálogo de confirmação sobrepõe o modal do formulário */
   if (confirming) {
-    return (
+    return createPortal(
       <FaqConfirmDialog
         message={confirmMessage}
         onConfirm={confirming === "save" ? handleConfirmSave : handleConfirmCancel}
         onCancel={() => setConfirming(null)}
-      />
+      />,
+      document.body,
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+  return createPortal(
+    <div className="app-overlay-modal fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="app-overlay-modal-card w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         {/* Campo da pergunta */}
         <div className="mb-4">
           <label className="mb-1.5 block text-sm font-medium text-[#5B0A0A]">
@@ -136,6 +145,7 @@ export function FaqForm({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

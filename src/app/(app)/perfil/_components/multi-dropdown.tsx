@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, X } from "lucide-react";
 
 type MultiDropdownOption = {
@@ -36,20 +37,32 @@ export function MultiDropdown({
 }: MultiDropdownProps) {
   const labelId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const pillRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const badgeRef = useRef<HTMLSpanElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const [visibleCount, setVisibleCount] = useState(values.length);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
 
     const onClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (
+        containerRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
       }
+      setOpen(false);
     };
 
     const onKey = (event: KeyboardEvent) => {
@@ -115,6 +128,31 @@ export function MultiDropdown({
 
     return () => ro.disconnect();
   }, [values, options]);
+
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+
+    const updatePosition = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 100,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, values, visibleCount]);
 
   const renderedTags = useMemo(() => {
     if (values.length === 0) {
@@ -225,49 +263,48 @@ export function MultiDropdown({
         />
       </div>
 
-      {open && (
-        <div
-          role="listbox"
-          aria-labelledby={labelId}
-          aria-multiselectable="true"
-          className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl bg-gray-200 py-2 shadow-lg"
-        >
-          <ul>
-            {options.map((option) => {
-              const checked = values.includes(option.value);
-              return (
-                <li key={option.value}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={checked}
-                    onClick={() => toggleValue(option.value)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-300 focus-visible:bg-gray-300 focus-visible:outline-none"
-                  >
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                        checked
-                          ? "border-calendar-cardinal bg-calendar-cardinal text-white"
-                          : "border-gray-400 bg-white"
-                      }`}
-                      aria-hidden
-                    >
-                      {checked ? "✓" : ""}
-                    </span>
-                    <span>{option.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+      {mounted &&
+        open &&
+        createPortal(
           <div
-            className="pointer-events-none absolute right-3 bottom-2 text-gray-500"
-            aria-hidden
+            ref={menuRef}
+            role="listbox"
+            aria-labelledby={labelId}
+            aria-multiselectable="true"
+            style={menuStyle}
+            className="profile-multi-dropdown-menu max-h-64 overflow-y-auto rounded-2xl bg-gray-200 py-2 shadow-lg"
           >
-            ▲
-          </div>
-        </div>
-      )}
+            <ul>
+              {options.map((option) => {
+                const checked = values.includes(option.value);
+                return (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={checked}
+                      onClick={() => toggleValue(option.value)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-300 focus-visible:bg-gray-300 focus-visible:outline-none"
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          checked
+                            ? "border-calendar-cardinal bg-calendar-cardinal text-white"
+                            : "border-gray-400 bg-white"
+                        }`}
+                        aria-hidden
+                      >
+                        {checked ? "✓" : ""}
+                      </span>
+                      <span>{option.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

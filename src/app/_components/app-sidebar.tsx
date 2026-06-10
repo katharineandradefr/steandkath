@@ -32,9 +32,7 @@ export function AppSidebar({ expanded, onToggle, onMouseLeave }: AppSidebarProps
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex flex-col rounded-tr-2xl rounded-br-2xl bg-sidebar-panel py-4 shadow-lg transition-[width] duration-300 ease-in-out ${
-        expanded ? "w-[220px]" : "w-[72px]"
-      }`}
+      className="sidebar-panel fixed inset-y-0 left-0 z-40 flex flex-col rounded-tr-2xl rounded-br-2xl bg-sidebar-panel py-4 shadow-lg"
       aria-label="Navegação principal"
       onMouseLeave={onMouseLeave}
     >

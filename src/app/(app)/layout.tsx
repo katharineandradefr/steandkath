@@ -1,4 +1,5 @@
 import { AppShell } from "~/app/_components/app-shell";
+import { PendencyNavigationProvider } from "~/app/_components/pendency-navigation-provider";
 import { UserPreferencesProvider } from "~/app/_components/user-preferences-provider";
 
 export default function AppShellLayout({
@@ -6,7 +7,9 @@ export default function AppShellLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <UserPreferencesProvider>
-      <AppShell>{children}</AppShell>
+      <PendencyNavigationProvider>
+        <AppShell>{children}</AppShell>
+      </PendencyNavigationProvider>
     </UserPreferencesProvider>
   );
 }

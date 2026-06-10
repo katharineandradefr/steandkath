@@ -30,6 +30,152 @@
   --sidebar-width-expanded: 13.75rem;
 }
 
+/* Largura da sidebar animável — mantém painéis (ex.: chat) sincronizados */
+@property --sidebar-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 72px;
+}
+
+.sidebar-sync {
+  --sidebar-width: 72px;
+  transition: --sidebar-width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-sync--expanded {
+  --sidebar-width: 220px;
+}
+
+.sidebar-panel {
+  width: var(--sidebar-width);
+  overflow: hidden;
+}
+
+.sidebar-content-offset {
+  left: var(--sidebar-width);
+}
+
+/* --- Seções expansíveis (acordeão / colapso suave) --- */
+.collapsible-section {
+  display: grid;
+  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapsible-section--collapsed {
+  grid-template-rows: 0fr;
+}
+
+.collapsible-section--expanded {
+  grid-template-rows: 1fr;
+}
+
+.collapsible-section-inner {
+  overflow: hidden;
+}
+
+.collapsible-section--expanded .collapsible-section-inner {
+  overflow: visible;
+  opacity: 1;
+  transition: opacity 220ms ease 60ms;
+}
+
+.collapsible-section--collapsed .collapsible-section-inner {
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+/* --- Modais: overlay centralizado (portal) --- */
+.app-overlay-modal {
+  animation: app-overlay-backdrop-in 220ms ease forwards;
+}
+
+.app-overlay-modal-card {
+  transform-origin: center center;
+  animation: app-overlay-card-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes app-overlay-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-overlay-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* --- Pendências: modal de detalhe --- */
+.pendency-modal-backdrop {
+  animation: app-overlay-backdrop-in 220ms ease forwards;
+}
+
+.pendency-modal-card {
+  transform-origin: center center;
+  animation: app-overlay-card-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* --- Pendências: menu de filtros --- */
+.pendency-filters-dropdown {
+  background-color: #ffffff;
+  transform-origin: top right;
+  animation: pendency-filters-fade-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes pendency-filters-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.pendency-filters-panels {
+  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pendency-filters-panels--root {
+  transform: translateX(0);
+}
+
+.pendency-filters-panels--subpanel {
+  transform: translateX(-50%);
+}
+
+html[data-theme="dark"] .pendency-filters-dropdown {
+  background-color: #1f1414;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.45);
+}
+
+html[data-theme="dark"] .pendency-filters-item {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .pendency-filters-item:hover,
+html[data-theme="dark"] .pendency-filters-item:focus-visible {
+  background-color: #3d2424;
+}
+
+html[data-theme="dark"] .pendency-filters-dropdown .border-gray-100 {
+  border-color: #3d2424 !important;
+}
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -184,6 +330,208 @@ html[data-theme="dark"] .chat-menu-action-btn:hover {
 
 html[data-theme="dark"] .chat-menu-action-icon {
   color: #f5caca;
+}
+
+/* --- Chat: status e botões do painel direito --- */
+.chat-status-option {
+  transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+.chat-status-option:hover {
+  filter: brightness(0.92);
+}
+
+.chat-create-group-btn {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.chat-create-group-btn:hover {
+  background-color: rgb(255 255 255 / 0.28);
+  border-color: rgb(255 255 255 / 0.55);
+}
+
+/* --- Chat: mini-menu da mensagem --- */
+.chat-msg-menu {
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  transform-origin: top left;
+  animation: chat-msg-menu-fade-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes chat-msg-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.chat-msg-menu-item {
+  color: #374151;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.chat-msg-menu-item:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.chat-msg-menu-item--muted {
+  color: #9ca3af;
+}
+
+.chat-msg-menu-item--muted:hover {
+  color: #6b7280;
+}
+
+.chat-msg-menu-icon {
+  color: #5b0a0a;
+}
+
+.chat-msg-menu-divider {
+  border-color: #f3f4f6;
+}
+
+html[data-theme="dark"] .chat-msg-menu {
+  background-color: #1f1414;
+  color: #f0f0f0;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.45);
+}
+
+html[data-theme="dark"] .chat-msg-menu-item {
+  color: #f0f0f0;
+}
+
+html[data-theme="dark"] .chat-msg-menu-item:hover {
+  background-color: #3d2424;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .chat-msg-menu-item--muted {
+  color: #a3a3a3;
+}
+
+html[data-theme="dark"] .chat-msg-menu-item--muted:hover {
+  background-color: #3d2424;
+  color: #e5e5e5;
+}
+
+html[data-theme="dark"] .chat-msg-menu-icon {
+  color: #f5caca;
+}
+
+html[data-theme="dark"] .chat-msg-menu-divider {
+  border-color: #3d2424;
+}
+
+/* --- Chat: painel direito (navegação entre opções) --- */
+.chat-options-panels {
+  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-options-panels--root {
+  transform: translateX(0);
+}
+
+.chat-options-panels--subpanel {
+  transform: translateX(-50%);
+}
+
+.chat-options-aside {
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Chat: mensagem de pendência --- */
+.chat-pendency-msg-label {
+  color: rgb(91 10 10 / 0.7);
+}
+
+.chat-pendency-msg-title {
+  color: #5b0a0a;
+}
+
+.chat-pendency-msg-body {
+  color: #374151;
+}
+
+html[data-theme="dark"] .chat-pendency-msg-label {
+  color: #f5caca !important;
+}
+
+html[data-theme="dark"] .chat-pendency-msg-title {
+  color: #fecaca !important;
+}
+
+html[data-theme="dark"] .chat-pendency-msg-body {
+  color: #e5e5e5 !important;
+  border-color: rgb(255 255 255 / 0.2) !important;
+}
+
+/* --- Pendência: select de responsável direto --- */
+.pendency-direct-select option,
+.pendency-direct-select-option {
+  background-color: #fafafa !important;
+  color: #1c0c10 !important;
+}
+
+html[data-theme="dark"] .pendency-direct-select option,
+html[data-theme="dark"] .pendency-direct-select-option {
+  background-color: #1c0c10;
+  color: #f5f5f5;
+}
+
+/* --- Tela de loading com logo --- */
+.brand-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.brand-loading-overlay--exiting {
+  opacity: 0;
+}
+
+.brand-loading-overlay--light {
+  background-color: #fafafa;
+  --brand-logo-color: #5b0a0a;
+}
+
+.brand-loading-overlay--dark {
+  background-color: #1c0c10;
+  --brand-logo-color: #fafafa;
+}
+
+.brand-logo-fill {
+  width: 7rem;
+  height: 7rem;
+  color: var(--brand-logo-color);
+}
+
+.brand-logo-fill-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-logo-filled {
+  clip-path: inset(100% 0 0 0);
+  animation: brand-logo-fill-up var(--brand-logo-fill-duration, 1s) ease-in-out forwards;
+}
+
+@keyframes brand-logo-fill-up {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
 .chat-subpanel-surface {

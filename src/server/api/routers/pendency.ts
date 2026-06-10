@@ -96,6 +96,7 @@ const pendencyWriteFieldsSchema = z.object({
   attachments: z.array(attachmentDraftSchema).max(8).default([]),
   audience: audienceSchema.nullable().optional(),
   professorResponsible: z.string().max(200).nullable().optional(),
+  directResponsibleId: z.string().max(50).nullable().optional(),
   dueDate: z.coerce.date().nullable().optional(),
   recurrence: recurrenceSchema.default("none"),
 });
@@ -174,6 +175,7 @@ export const pendencyRouter = createTRPCRouter({
         checklist: input.checklist,
         audience: input.audience ?? null,
         professorResponsible: input.professorResponsible ?? null,
+        directResponsibleId: input.directResponsibleId ?? null,
         dueDate: input.dueDate ? normalizeDueDate(input.dueDate) : null,
         recurrence: input.recurrence ?? "none",
       });
@@ -233,6 +235,9 @@ export const pendencyRouter = createTRPCRouter({
       if (patch.audience !== undefined) existing.audience = patch.audience;
       if (patch.professorResponsible !== undefined) {
         existing.professorResponsible = patch.professorResponsible;
+      }
+      if (patch.directResponsibleId !== undefined) {
+        existing.directResponsibleId = patch.directResponsibleId;
       }
       if (patch.dueDate !== undefined) {
         existing.dueDate = patch.dueDate ? normalizeDueDate(patch.dueDate) : null;

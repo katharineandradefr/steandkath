@@ -199,36 +199,26 @@ export function ProfileForm() {
             placeholder="Selecione o cargo"
           />
 
-          {showProjectsAndArea && (
-            <MultiDropdown
-              label="Selecione de quais projetos participa:"
-              values={form.projects}
-              options={projectOptions}
-              onChange={(projects) =>
-                setForm((current) => ({
-                  ...current,
-                  projects: projects as PendencyProjectKey[],
-                }))
-              }
-            />
-          )}
-
-          <div>
-            <label
-              htmlFor="profile-phone"
-              className="mb-1.5 block text-sm font-medium text-calendar-bordeaux"
-            >
-              Numero para contato:
-            </label>
-            <input
-              id="profile-phone"
-              type="tel"
-              value={form.phone}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, phone: event.target.value }))
-              }
-              className="w-full rounded-full bg-gray-200 px-4 py-2.5 text-sm text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-            />
+          <div
+            className={`collapsible-section md:col-span-2 ${
+              showProjectsAndArea
+                ? "collapsible-section--expanded"
+                : "collapsible-section--collapsed"
+            }`}
+          >
+            <div className="collapsible-section-inner">
+              <MultiDropdown
+                label="Selecione de quais projetos participa:"
+                values={form.projects}
+                options={projectOptions}
+                onChange={(projects) =>
+                  setForm((current) => ({
+                    ...current,
+                    projects: projects as PendencyProjectKey[],
+                  }))
+                }
+              />
+            </div>
           </div>
 
           <div>
@@ -248,10 +238,34 @@ export function ProfileForm() {
               className="w-full rounded-full bg-gray-200 px-4 py-2.5 text-sm text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
             />
           </div>
+
+          <div>
+            <label
+              htmlFor="profile-phone"
+              className="mb-1.5 block text-sm font-medium text-calendar-bordeaux"
+            >
+              Numero para contato:
+            </label>
+            <input
+              id="profile-phone"
+              type="tel"
+              value={form.phone}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, phone: event.target.value }))
+              }
+              className="w-full rounded-full bg-gray-200 px-4 py-2.5 text-sm text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+            />
+          </div>
         </div>
 
-        {showProjectsAndArea && (
-          <div className="mt-6">
+        <div
+          className={`collapsible-section mt-6 ${
+            showProjectsAndArea
+              ? "collapsible-section--expanded"
+              : "collapsible-section--collapsed"
+          }`}
+        >
+          <div className="collapsible-section-inner">
             <p className="mb-2 text-sm font-medium text-calendar-bordeaux">
               Selecione a grande area:
             </p>
@@ -281,7 +295,7 @@ export function ProfileForm() {
               })}
             </div>
           </div>
-        )}
+        </div>
 
         <div className="mt-6 flex flex-col items-end gap-2">
           {saveMessage && (

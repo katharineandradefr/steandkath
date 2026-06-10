@@ -102,6 +102,8 @@ export type Pendency = {
   checklist: ChecklistItem[];
   audience?: PendencyAudience | null;
   professorResponsible?: string | null;
+  /** Id da conversa do chat (contato responsável direto). */
+  directResponsibleId?: string | null;
   dueDate?: string | null;
   recurrence?: PendencyRecurrence;
   createdAt: string;
@@ -360,6 +362,7 @@ export function createEmptyPendencyDraft(
     checklist: [],
     audience: null,
     professorResponsible: null,
+    directResponsibleId: null,
     dueDate: null,
     recurrence: "none",
     createdAt: now,

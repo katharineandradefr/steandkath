@@ -1,3 +1,10 @@
+export type StatusValue =
+  | "em-atendimento"
+  | "sem-atendimento"
+  | "aguardando-dr"
+  | "aguardando-design"
+  | "finalizado";
+
 export type Conversation = {
   id: string;
   name: string;
@@ -8,12 +15,18 @@ export type Conversation = {
   online: boolean;
   isGroup?: boolean;
   /** Status do atendimento desta conversa */
-  conversationStatus?: "em-atendimento" | "sem-atendimento" | "finalizado";
+  conversationStatus?: StatusValue;
+  /** Nome de quem está atendendo a conversa (somente em "em-atendimento") */
+  attendantName?: string;
 };
 
 export type Message = {
   id: string;
   text: string;
+  /** Título da pendência vinculada (mensagens encaminhadas do kanban) */
+  pendencyTitle?: string;
+  /** Id da pendência vinculada (para abrir detalhes a partir do chat) */
+  pendencyId?: string;
   /** Data URL de imagem enviada como anexo */
   imageUrl?: string;
   sender: "me" | "other";
@@ -30,16 +43,18 @@ export type SavedMessage = {
   preview: string;
 };
 
-export type StatusValue =
-  | "em-atendimento"
-  | "sem-atendimento"
-  | "aguardando-dr"
-  | "aguardando-design"
-  | "finalizado";
-
 export type SubPanel =
   | "computadores"
   | "listas"
   | "mensagens-salvas"
   | "historico"
   | null;
+
+/** Registro de atendimento finalizado no histórico do chat */
+export type ChatHistoryEntry = {
+  id: string;
+  date: string;
+  status: string;
+  user: string;
+  images?: string[];
+};
