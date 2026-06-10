@@ -36,6 +36,9 @@ const goalBaseFieldsSchema = z.object({
   dueDate: z.coerce.date(),
   assigneeName: z.string().max(200).nullable().optional(),
   assigneeAvatarUrl: z.string().url().nullable().optional(),
+  targetCount: z.number().int().min(1).nullable().optional(),
+  doneCount: z.number().int().min(0).optional(),
+  progressUnit: z.string().trim().max(40).nullable().optional(),
 });
 
 const goalWriteFieldsSchema = goalBaseFieldsSchema.refine(
@@ -62,9 +65,30 @@ function docToGoal(doc: GoalDoc): Goal {
     dueDate: toGoalDateIso(doc.dueDate),
     assigneeName: doc.assigneeName ?? null,
     assigneeAvatarUrl: doc.assigneeAvatarUrl ?? null,
+    targetCount: doc.targetCount ?? null,
+    doneCount: doc.doneCount ?? 0,
+    progressUnit: doc.progressUnit ?? null,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
+}
+
+/**
+ * Aplica regras de progresso: clamp de concluídas e auto-conclusão ao atingir o total.
+ */
+function applyProgressRules(
+  target: number | null | undefined,
+  done: number | undefined,
+  status: GoalStatus,
+): { doneCount: number; status: GoalStatus } {
+  if (target === null || target === undefined) {
+    return { doneCount: 0, status };
+  }
+
+  const clampedDone = Math.min(Math.max(done ?? 0, 0), target);
+  const nextStatus = clampedDone >= target ? "completed" : status;
+
+  return { doneCount: clampedDone, status: nextStatus };
 }
 
 /**
@@ -163,16 +187,25 @@ export const goalRouter = createTRPCRouter({
     .input(goalWriteFieldsSchema)
     .mutation(async ({ input }) => {
       assertCan("create");
+      const targetCount = input.targetCount ?? null;
+      const progress = applyProgressRules(
+        targetCount,
+        input.doneCount,
+        input.status,
+      );
       const doc = await GoalModel.create({
         id: crypto.randomUUID(),
         areaKey: input.areaKey,
         title: input.title,
         projectKey: input.projectKey,
-        status: input.status,
+        status: progress.status,
         startDate: normalizeDate(input.startDate),
         dueDate: normalizeDate(input.dueDate),
         assigneeName: input.assigneeName ?? null,
         assigneeAvatarUrl: input.assigneeAvatarUrl ?? null,
+        targetCount,
+        doneCount: progress.doneCount,
+        progressUnit: targetCount ? (input.progressUnit ?? null) : null,
       });
       // TODO: registrar no histórico de atividades (RN-C05)
       return docToGoal(doc);
@@ -208,6 +241,29 @@ export const goalRouter = createTRPCRouter({
       }
       if (patch.assigneeAvatarUrl !== undefined) {
         existing.assigneeAvatarUrl = patch.assigneeAvatarUrl;
+      }
+      if (patch.targetCount !== undefined) {
+        existing.targetCount = patch.targetCount;
+      }
+      if (patch.progressUnit !== undefined) {
+        existing.progressUnit = patch.progressUnit;
+      }
+      if (patch.doneCount !== undefined) {
+        existing.doneCount = patch.doneCount;
+      }
+
+      const targetCount = existing.targetCount ?? null;
+      if (targetCount === null) {
+        existing.doneCount = 0;
+        existing.progressUnit = null;
+      } else {
+        const progress = applyProgressRules(
+          targetCount,
+          existing.doneCount,
+          existing.status,
+        );
+        existing.doneCount = progress.doneCount;
+        existing.status = progress.status;
       }
 
       if (existing.dueDate < existing.startDate) {

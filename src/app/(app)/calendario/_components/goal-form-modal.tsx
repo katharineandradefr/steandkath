@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, X } from "lucide-react";
 
 import {
   createEmptyGoalDraft,
+  getGoalProgress,
   GOAL_STATUS_LABELS,
   GOAL_STATUSES,
   type Goal,
   type GoalStatus,
 } from "~/shared/goal";
 import {
+  PENDENCY_PROJECT_BAR_HEX,
   PENDENCY_PROJECT_KEYS,
   PENDENCY_PROJECT_LABELS,
   type PendencyProjectKey,
@@ -34,6 +36,9 @@ type FormState = {
   dueDate: string;
   assigneeName: string;
   assigneeAvatarUrl: string;
+  targetCount: string;
+  doneCount: string;
+  progressUnit: string;
 };
 
 /**
@@ -52,6 +57,91 @@ function toInputDateFromUtcDate(date: Date): string {
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Dropdown de projeto com tag colorida no campo fechado e pilulas na lista.
+ */
+function ProjectTagSelect({
+  value,
+  onChange,
+}: {
+  value: PendencyProjectKey;
+  onChange: (key: PendencyProjectKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between rounded-lg border border-gray-300 px-3 py-2 focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+      >
+        <span
+          className="rounded-full px-3 py-1 text-xs font-medium text-white"
+          style={{ backgroundColor: PENDENCY_PROJECT_BAR_HEX[value] }}
+        >
+          {PENDENCY_PROJECT_LABELS[value]}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-gray-600 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Projeto"
+          className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+        >
+          <div className="flex flex-col items-start gap-2">
+            {PENDENCY_PROJECT_KEYS.map((key) => {
+              const isSelected = key === value;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    onChange(key);
+                    setOpen(false);
+                  }}
+                  style={{ backgroundColor: PENDENCY_PROJECT_BAR_HEX[key] }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
+                    isSelected ? "ring-2 ring-gray-400 ring-offset-1" : "opacity-85"
+                  }`}
+                >
+                  {PENDENCY_PROJECT_LABELS[key]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -106,12 +196,51 @@ export function GoalFormModal({
 
   if (!open) return null;
 
+  const targetNum = form.targetCount.trim()
+    ? Number.parseInt(form.targetCount, 10)
+    : null;
+  const doneNum = form.doneCount.trim()
+    ? Number.parseInt(form.doneCount, 10)
+    : 0;
+  const progress = getGoalProgress({
+    targetCount: targetNum && !Number.isNaN(targetNum) ? targetNum : null,
+    doneCount: Number.isNaN(doneNum) ? 0 : doneNum,
+  });
+
+  const adjustDoneCount = (delta: number) => {
+    if (!targetNum || Number.isNaN(targetNum)) return;
+    const current = Number.isNaN(doneNum) ? 0 : doneNum;
+    const next = Math.min(Math.max(current + delta, 0), targetNum);
+    setForm((f) => ({ ...f, doneCount: String(next) }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!form.title.trim()) {
       setError("Informe o título da meta.");
+      return;
+    }
+
+    const targetCountRaw = form.targetCount.trim();
+    const targetCount = targetCountRaw ? Number.parseInt(targetCountRaw, 10) : null;
+    const doneCount = form.doneCount.trim()
+      ? Number.parseInt(form.doneCount, 10)
+      : 0;
+
+    if (targetCountRaw && (Number.isNaN(targetCount) || (targetCount ?? 0) < 1)) {
+      setError("Informe um total válido (mínimo 1) ou deixe o campo vazio.");
+      return;
+    }
+
+    if (targetCount !== null && (Number.isNaN(doneCount) || doneCount < 0)) {
+      setError("Informe uma quantidade concluída válida.");
+      return;
+    }
+
+    if (targetCount !== null && doneCount > targetCount) {
+      setError("As concluídas não podem ser maiores que o total.");
       return;
     }
 
@@ -123,6 +252,10 @@ export function GoalFormModal({
       dueDate: new Date(`${form.dueDate}T00:00:00.000Z`),
       assigneeName: form.assigneeName.trim() || null,
       assigneeAvatarUrl: form.assigneeAvatarUrl.trim() || null,
+      targetCount,
+      doneCount: targetCount === null ? 0 : doneCount,
+      progressUnit:
+        targetCount === null ? null : form.progressUnit.trim() || null,
     };
 
     if (payload.dueDate < payload.startDate) {
@@ -144,7 +277,7 @@ export function GoalFormModal({
       aria-modal="true"
       aria-labelledby="goal-modal-title"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-gray-900 shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white p-6 text-gray-900 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="goal-modal-title" className="text-lg font-semibold text-gray-900">
             {mode === "create" ? "Nova meta" : "Editar meta"}
@@ -176,26 +309,13 @@ export function GoalFormModal({
           </div>
 
           <div>
-            <label htmlFor="goal-project" className="mb-1 block text-sm font-medium text-gray-700">
+            <span className="mb-1 block text-sm font-medium text-gray-700">
               Projeto
-            </label>
-            <select
-              id="goal-project"
+            </span>
+            <ProjectTagSelect
               value={form.projectKey}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  projectKey: e.target.value as PendencyProjectKey,
-                }))
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
-            >
-              {PENDENCY_PROJECT_KEYS.map((key) => (
-                <option key={key} value={key}>
-                  {PENDENCY_PROJECT_LABELS[key]}
-                </option>
-              ))}
-            </select>
+              onChange={(key) => setForm((f) => ({ ...f, projectKey: key }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -252,6 +372,117 @@ export function GoalFormModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <p className="text-sm font-medium text-gray-700">
+              Acompanhamento (opcional)
+            </p>
+
+            <div>
+              <label
+                htmlFor="goal-progress-unit"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Unidade
+              </label>
+              <input
+                id="goal-progress-unit"
+                type="text"
+                value={form.progressUnit}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, progressUnit: e.target.value }))
+                }
+                placeholder="Ex.: fichas"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                maxLength={40}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="goal-target-count"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Total
+              </label>
+              <input
+                id="goal-target-count"
+                type="number"
+                min={1}
+                value={form.targetCount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, targetCount: e.target.value }))
+                }
+                placeholder="Ex.: 30"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+              />
+            </div>
+
+            {progress.hasProgress && (
+              <>
+                <div>
+                  <label
+                    htmlFor="goal-done-count"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                    Concluídas
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => adjustDoneCount(-1)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+                      aria-label="Diminuir concluídas"
+                    >
+                      −
+                    </button>
+                    <input
+                      id="goal-done-count"
+                      type="number"
+                      min={0}
+                      max={progress.total}
+                      value={form.doneCount}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, doneCount: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => adjustDoneCount(1)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+                      aria-label="Aumentar concluídas"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200"
+                    role="progressbar"
+                    aria-valuenow={progress.percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Progresso da meta"
+                  >
+                    <div
+                      className="h-full rounded-full bg-calendar-cardinal transition-all duration-300"
+                      style={{ width: `${progress.percent}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    {progress.done}/{progress.total}
+                    {form.progressUnit.trim()
+                      ? ` ${form.progressUnit.trim()}`
+                      : ""}{" "}
+                    ({progress.percent}%)
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           <div>
@@ -332,5 +563,9 @@ function buildFormFromGoal(
     dueDate: initialStartDate ? dateInput : toInputDate(draft.dueDate),
     assigneeName: draft.assigneeName ?? "",
     assigneeAvatarUrl: draft.assigneeAvatarUrl ?? "",
+    targetCount:
+      draft.targetCount != null ? String(draft.targetCount) : "",
+    doneCount: String(draft.doneCount ?? 0),
+    progressUnit: draft.progressUnit ?? "",
   };
 }

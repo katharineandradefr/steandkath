@@ -30,6 +30,9 @@ const goalSchema = new Schema(
     dueDate: { type: Date, required: true, index: true },
     assigneeName: { type: String, default: null },
     assigneeAvatarUrl: { type: String, default: null },
+    targetCount: { type: Number, default: null },
+    doneCount: { type: Number, default: 0 },
+    progressUnit: { type: String, default: null, maxlength: 40 },
   },
   { timestamps: true },
 );

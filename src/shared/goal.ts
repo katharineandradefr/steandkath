@@ -24,8 +24,18 @@ export type Goal = {
   dueDate: string;
   assigneeName?: string | null;
   assigneeAvatarUrl?: string | null;
+  targetCount?: number | null;
+  doneCount?: number;
+  progressUnit?: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type GoalProgress = {
+  hasProgress: boolean;
+  done: number;
+  total: number;
+  percent: number;
 };
 
 export const GOAL_STATUSES: readonly GoalStatus[] = [
@@ -161,6 +171,27 @@ export function createEmptyGoalDraft(
     dueDate: today,
     assigneeName: null,
     assigneeAvatarUrl: null,
+    targetCount: null,
+    doneCount: 0,
+    progressUnit: null,
     ...overrides,
   };
+}
+
+/**
+ * Calcula progresso quantitativo da meta (total-alvo vs concluídas).
+ */
+export function getGoalProgress(goal: {
+  targetCount?: number | null;
+  doneCount?: number;
+}): GoalProgress {
+  const total = goal.targetCount ?? null;
+  if (total === null || total <= 0) {
+    return { hasProgress: false, done: 0, total: 0, percent: 0 };
+  }
+
+  const done = Math.min(Math.max(goal.doneCount ?? 0, 0), total);
+  const percent = Math.min(100, Math.round((done / total) * 100));
+
+  return { hasProgress: true, done, total, percent };
 }
