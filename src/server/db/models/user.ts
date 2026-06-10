@@ -24,10 +24,6 @@ const userSchema = new Schema(
       type: [String],
       required: true,
       enum: PENDENCY_PROJECT_KEYS,
-      validate: {
-        validator: (value: string[]) => value.length >= 1,
-        message: "Selecione ao menos um projeto.",
-      },
     },
     area: {
       type: String,

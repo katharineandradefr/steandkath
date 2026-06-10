@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { getCurrentUserPermissionContext } from "~/server/auth/permission-context";
+import { resolvePendencyPermission } from "~/server/auth/pendency-permissions";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   deleteAllAttachments,
@@ -24,6 +26,7 @@ import {
   type PendencyStatus,
   type PendencyUrgency,
 } from "~/shared/pendency";
+import { getVisiblePendencyStatuses } from "~/shared/permissions";
 
 const projectKeySchema = z.enum(
   PENDENCY_PROJECT_KEYS as unknown as [PendencyProjectKey, ...PendencyProjectKey[]],
@@ -110,6 +113,19 @@ function normalizeDueDate(date: Date): Date {
   );
 }
 
+async function assertCan(
+  action: Parameters<typeof resolvePendencyPermission>[0],
+  status?: Parameters<typeof resolvePendencyPermission>[1],
+) {
+  const allowed = await resolvePendencyPermission(action, status);
+  if (!allowed) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Você não tem permissão para esta ação.",
+    });
+  }
+}
+
 export const pendencyRouter = createTRPCRouter({
   list: publicProcedure
     .input(
@@ -120,7 +136,13 @@ export const pendencyRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
-      const filter = input?.areaKey ? { areaKey: input.areaKey } : {};
+      const { role } = await getCurrentUserPermissionContext();
+      const visibleStatuses = getVisiblePendencyStatuses(role);
+      const filter: Record<string, unknown> = {
+        status: { $in: visibleStatuses },
+      };
+      if (input?.areaKey) filter.areaKey = input.areaKey;
+
       const docs = await PendencyModel.find(filter)
         .sort({ status: 1, position: 1 })
         .exec();
@@ -154,6 +176,7 @@ export const pendencyRouter = createTRPCRouter({
   create: publicProcedure
     .input(pendencyWriteFieldsSchema)
     .mutation(async ({ input }) => {
+      await assertCan("create");
       const attachments = await resolveAttachments(input.attachments);
       const pendingCount = await PendencyModel.countDocuments({
         areaKey: input.areaKey,
@@ -193,6 +216,7 @@ export const pendencyRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      await assertCan("update");
       const existing = await PendencyModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Pendência não encontrada." });
@@ -251,6 +275,7 @@ export const pendencyRouter = createTRPCRouter({
   delete: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
+      await assertCan("delete");
       const existing = await PendencyModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Pendência não encontrada." });
@@ -289,6 +314,52 @@ export const pendencyRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      const ids = input.moves.map((move) => move.id);
+      const existingDocs = await PendencyModel.find({ id: { $in: ids } })
+        .select({ id: 1, status: 1, position: 1 })
+        .lean()
+        .exec();
+      const existingById = new Map(
+        existingDocs.map((doc) => [
+          doc.id,
+          {
+            status: doc.status,
+            position: doc.position,
+          },
+        ]),
+      );
+
+      for (const move of input.moves) {
+        const current = existingById.get(move.id);
+        if (!current) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pendência não encontrada.",
+          });
+        }
+
+        const statusChanged = move.status !== current.status;
+        const positionChanged = move.position !== current.position;
+        if (!statusChanged && !positionChanged) continue;
+
+        if (statusChanged) {
+          await assertCan("set_status", move.status);
+          continue;
+        }
+
+        const canUpdate = await resolvePendencyPermission("update");
+        const canSetStatus = await resolvePendencyPermission(
+          "set_status",
+          move.status,
+        );
+        if (!canUpdate && !canSetStatus) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Você não tem permissão para esta ação.",
+          });
+        }
+      }
+
       const bulkOps = input.moves.map((move) => ({
         updateOne: {
           filter: { id: move.id },

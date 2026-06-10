@@ -1,3 +1,7 @@
+import {
+  PENDENCY_STATUSES,
+  type PendencyStatus,
+} from "~/shared/pendency";
 import { USER_ROLES, type UserRole } from "~/shared/user";
 
 export type PermissionKey =
@@ -20,6 +24,7 @@ export type PermissionKey =
   | "goal.create"
   | "goal.view"
   | "goal.edit"
+  | "goal.delete"
   | "goal.complete"
   | "goal.status_pending"
   | "goal.status_in_progress"
@@ -66,6 +71,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "goal.create", label: "Adicionar meta" },
       { key: "goal.view", label: "Visualizar meta" },
       { key: "goal.edit", label: "Editar meta" },
+      { key: "goal.delete", label: "Excluir meta" },
       { key: "goal.complete", label: "Marcar meta como concluída" },
       { key: "goal.status_pending", label: "Status: Pendente" },
       { key: "goal.status_in_progress", label: "Status: Em execução" },
@@ -106,6 +112,7 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.create": true,
     "goal.view": true,
     "goal.edit": true,
+    "goal.delete": true,
     "goal.complete": true,
     "goal.status_pending": true,
     "goal.status_in_progress": true,
@@ -133,6 +140,7 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.create": false,
     "goal.view": true,
     "goal.edit": false,
+    "goal.delete": false,
     "goal.complete": false,
     "goal.status_pending": false,
     "goal.status_in_progress": true,
@@ -160,6 +168,7 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.create": true,
     "goal.view": true,
     "goal.edit": true,
+    "goal.delete": true,
     "goal.complete": true,
     "goal.status_pending": true,
     "goal.status_in_progress": true,
@@ -187,7 +196,8 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.create": false,
     "goal.view": true,
     "goal.edit": false,
-    "goal.complete": false,
+    "goal.delete": false,
+    "goal.complete": true,
     "goal.status_pending": false,
     "goal.status_in_progress": true,
     "goal.status_completed": false,
@@ -195,6 +205,111 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.status_cancelled": false,
   },
 };
+
+/**
+ * Verifica se o papel possui a permissão na matriz.
+ */
+export function can(
+  role: UserRole | null | undefined,
+  key: PermissionKey,
+  matrix: PermissionMatrix,
+): boolean {
+  if (!role) return false;
+  return matrix[role]?.[key] ?? false;
+}
+
+const GOAL_STATUS_PERMISSION_KEYS: Record<
+  "pending" | "in_progress" | "completed" | "postponed" | "cancelled",
+  PermissionKey
+> = {
+  pending: "goal.status_pending",
+  in_progress: "goal.status_in_progress",
+  completed: "goal.status_completed",
+  postponed: "goal.status_postponed",
+  cancelled: "goal.status_cancelled",
+};
+
+export type GoalPermissionAction =
+  | "create"
+  | "update"
+  | "update_status"
+  | "delete"
+  | "view";
+
+/**
+ * Mapeia ação de meta para chave de permissão.
+ */
+export function goalActionToPermissionKey(
+  action: GoalPermissionAction,
+  status?: "pending" | "in_progress" | "completed" | "postponed" | "cancelled",
+): PermissionKey {
+  switch (action) {
+    case "create":
+      return "goal.create";
+    case "update":
+      return "goal.edit";
+    case "delete":
+      return "goal.delete";
+    case "view":
+      return "goal.view";
+    case "update_status":
+      if (status === "completed") return "goal.complete";
+      if (status) return GOAL_STATUS_PERMISSION_KEYS[status];
+      return "goal.status_in_progress";
+  }
+}
+
+const PENDENCY_STATUS_PERMISSION_KEYS: Record<
+  Exclude<PendencyStatus, "waiting_someone">,
+  PermissionKey
+> = {
+  pending: "pendency.status_pending",
+  in_review: "pendency.status_in_review",
+  fixed: "pendency.status_corrected",
+  finished: "pendency.status_completed",
+};
+
+export type PendencyPermissionAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "set_status";
+
+/**
+ * Mapeia ação de pendência para chave de permissão.
+ */
+export function pendencyActionToPermissionKey(
+  action: PendencyPermissionAction,
+  status?: PendencyStatus,
+): PermissionKey {
+  switch (action) {
+    case "create":
+    case "update":
+      return "pendency.edit";
+    case "delete":
+      return "pendency.delete";
+    case "set_status":
+      if (!status || status === "waiting_someone") return "pendency.edit";
+      return PENDENCY_STATUS_PERMISSION_KEYS[status];
+  }
+}
+
+/** Colunas visíveis no board por papel (ausente = todas). */
+export const PENDENCY_VISIBLE_STATUSES_BY_ROLE: Partial<
+  Record<UserRole, PendencyStatus[]>
+> = {
+  sub_coordinator: ["pending", "waiting_someone", "fixed"],
+};
+
+/**
+ * Retorna os status de pendência visíveis no board para o papel.
+ */
+export function getVisiblePendencyStatuses(
+  role: UserRole | null | undefined,
+): PendencyStatus[] {
+  if (!role) return [...PENDENCY_STATUSES];
+  return PENDENCY_VISIBLE_STATUSES_BY_ROLE[role] ?? [...PENDENCY_STATUSES];
+}
 
 /** Garante que todas as chaves existam para cada papel. */
 export function normalizePermissionMatrix(

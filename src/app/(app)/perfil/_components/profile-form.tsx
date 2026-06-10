@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useActiveUser } from "~/app/_components/active-user-provider";
 import { AvatarUpload } from "~/app/(app)/perfil/_components/avatar-upload";
 import { Dropdown } from "~/app/(app)/perfil/_components/dropdown";
 import { MultiDropdown } from "~/app/(app)/perfil/_components/multi-dropdown";
@@ -56,6 +57,7 @@ export function ProfileForm() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const utils = api.useUtils();
+  const { markProfileSetupComplete } = useActiveUser();
   const { data: existingUser, isLoading } = api.user.getFirst.useQuery();
 
   const upsertMutation = api.user.upsert.useMutation({
@@ -70,12 +72,15 @@ export function ProfileForm() {
         area: savedUser.area ?? null,
         photoBase64: savedUser.photoBase64 ?? null,
       });
+      markProfileSetupComplete();
       setSaveMessage("Perfil salvo com sucesso.");
       setSaveError(null);
       await utils.user.invalidate();
     },
-    onError: () => {
-      setSaveError("Não foi possível salvar o perfil. Tente novamente.");
+    onError: (error) => {
+      setSaveError(
+        error.message || "Não foi possível salvar o perfil. Tente novamente.",
+      );
       setSaveMessage(null);
     },
   });
@@ -244,7 +249,7 @@ export function ProfileForm() {
               htmlFor="profile-phone"
               className="mb-1.5 block text-sm font-medium text-calendar-bordeaux"
             >
-              Numero para contato:
+              Número para contato:
             </label>
             <input
               id="profile-phone"
@@ -267,7 +272,7 @@ export function ProfileForm() {
         >
           <div className="collapsible-section-inner">
             <p className="mb-2 text-sm font-medium text-calendar-bordeaux">
-              Selecione a grande area:
+              Selecione a grande área:
             </p>
             <div className="flex flex-wrap gap-2">
               {PENDENCY_AREA_KEYS.map((areaKey) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import {
   PENDENCY_AREA_FULL_LABELS,
   type PendencyAreaKey,
@@ -35,6 +36,9 @@ export function PendencyBoardHeader({
   onSearchChange,
   onCreateClick,
 }: PendencyBoardHeaderProps) {
+  const { can } = usePermissions();
+  const canCreate = can("pendency.edit");
+
   const areaTitle =
     areaFilters.length === 1
       ? PENDENCY_AREA_FULL_LABELS[areaFilters[0]!]
@@ -51,13 +55,15 @@ export function PendencyBoardHeader({
             {areaTitle}
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={onCreateClick}
-          className="shrink-0 rounded-lg bg-calendar-cardinal px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-calendar-bordeaux focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-        >
-          Criar Pendência
-        </button>
+        {canCreate ? (
+          <button
+            type="button"
+            onClick={onCreateClick}
+            className="shrink-0 rounded-lg bg-calendar-cardinal px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-calendar-bordeaux focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+          >
+            Criar Pendência
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import { CalendarSidePanel } from "~/app/(app)/calendario/_components/calendar-side-panel";
 import { CreatePendencyModal } from "~/app/(app)/calendario/_components/create-pendency-modal";
 import { GoalFormModal } from "~/app/(app)/calendario/_components/goal-form-modal";
@@ -52,6 +53,7 @@ export function CalendarDashboard({
     isError,
   } = api.goal.listByMonth.useQuery(referenceMonth);
 
+  const { can } = usePermissions();
   const utils = api.useUtils();
 
   const updateStatusMutation = api.goal.updateStatus.useMutation({
@@ -78,16 +80,20 @@ export function CalendarDashboard({
     setSelectedDay(date);
   }, []);
 
-  const handleActivateDay = useCallback((date: Date) => {
-    setSelectedDay(date);
-    const todayUtc = getUtcTodayStart().getTime();
-    if (date.getTime() >= todayUtc) {
-      setModalMode("create");
-      setEditingGoal(null);
-      setGoalInitialStartDate(date);
-      setModalOpen(true);
-    }
-  }, []);
+  const handleActivateDay = useCallback(
+    (date: Date) => {
+      setSelectedDay(date);
+      if (!can("goal.create")) return;
+      const todayUtc = getUtcTodayStart().getTime();
+      if (date.getTime() >= todayUtc) {
+        setModalMode("create");
+        setEditingGoal(null);
+        setGoalInitialStartDate(date);
+        setModalOpen(true);
+      }
+    },
+    [can],
+  );
 
   const handleEditGoal = (goal: Goal) => {
     setModalMode("edit");

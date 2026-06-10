@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AppSidebar } from "~/app/_components/app-sidebar";
+import { ProfileSetupBanner } from "~/app/_components/profile-setup-banner";
 
 const STORAGE_KEY = "sidebar-expanded";
 
@@ -55,6 +56,7 @@ export function AppShell({ children }: AppShellProps) {
 
       <div className="flex h-full min-h-0 min-w-0 flex-col pl-(--sidebar-width)">
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 md:p-8">
+          <ProfileSetupBanner />
           {children}
         </main>
       </div>

@@ -14,19 +14,19 @@ type Toast = { message: string; variant: "success" | "error" } | null;
 const INITIAL_FAQS: FaqEntry[] = [
   {
     id: "1",
-    question: "O que é a medcof?",
+    question: "O que é a MedCof?",
     answer:
       "A MedCof é uma empresa especializada em cursos preparatórios para Residência Médica e Revalida, com foco em alta performance e metodologia baseada em análise de provas.",
   },
   {
     id: "2",
-    question: "Oque é o internato?",
+    question: "O que é o internato?",
     answer:
       "O Internato MedCof é um programa intensivo voltado para estudantes de medicina em fase de internato, oferecendo acompanhamento especializado e material direcionado para os principais concursos.",
   },
   {
     id: "3",
-    question: "Oque é o extensivo?",
+    question: "O que é o extensivo?",
     answer:
       "O curso Extensivo MedCof é um preparatório anual voltado para provas de Residência Médica e Revalida, focado em alta performance. Ele utiliza um método de ensino estratégico baseado em análise estatística de provas anteriores, permitindo que o aluno estude os temas mais quentes e otimize seu tempo de estudo.",
   },

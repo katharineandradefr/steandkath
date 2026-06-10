@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { canGoalAction } from "~/server/auth/goal-permissions";
+import { resolveGoalPermission } from "~/server/auth/goal-permissions";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { GoalModel, type GoalDoc } from "~/server/db/models/goal";
 import {
@@ -123,11 +123,12 @@ function getWeekBounds(referenceDate: Date) {
   return { start, end };
 }
 
-function assertCan(
-  action: Parameters<typeof canGoalAction>[0],
-  status?: Parameters<typeof canGoalAction>[1],
+async function assertCan(
+  action: Parameters<typeof resolveGoalPermission>[0],
+  status?: Parameters<typeof resolveGoalPermission>[1],
 ) {
-  if (!canGoalAction(action, status)) {
+  const allowed = await resolveGoalPermission(action, status);
+  if (!allowed) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Você não tem permissão para esta ação.",
@@ -146,7 +147,7 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input }) => {
-      assertCan("view");
+      await assertCan("view");
       const { start, end } = getMonthBounds(input.year, input.month);
       const filter: Record<string, unknown> = {
         startDate: { $lte: end },
@@ -169,7 +170,7 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input }) => {
-      assertCan("view");
+      await assertCan("view");
       const { start, end } = getWeekBounds(input.referenceDate);
       const filter: Record<string, unknown> = {
         startDate: { $lte: end },
@@ -186,7 +187,7 @@ export const goalRouter = createTRPCRouter({
   create: publicProcedure
     .input(goalWriteFieldsSchema)
     .mutation(async ({ input }) => {
-      assertCan("create");
+      await assertCan("create");
       const targetCount = input.targetCount ?? null;
       const progress = applyProgressRules(
         targetCount,
@@ -219,13 +220,20 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      assertCan("update");
+      await assertCan("update");
       const existing = await GoalModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
       }
 
       const patch = input.patch;
+      if (
+        patch.status !== undefined &&
+        patch.status !== existing.status
+      ) {
+        await assertCan("update_status", patch.status);
+      }
+
       if (patch.title !== undefined) existing.title = patch.title;
       if (patch.areaKey !== undefined) existing.areaKey = patch.areaKey;
       if (patch.projectKey !== undefined) existing.projectKey = patch.projectKey;
@@ -286,7 +294,7 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      assertCan("update_status", input.status);
+      await assertCan("update_status", input.status);
       const existing = await GoalModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
@@ -301,7 +309,7 @@ export const goalRouter = createTRPCRouter({
   delete: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
-      assertCan("delete");
+      await assertCan("delete");
       const existing = await GoalModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });

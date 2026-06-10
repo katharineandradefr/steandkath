@@ -16,7 +16,7 @@ const VARIANT_CLASSES: Record<ToastVariant, string> = {
 };
 
 /**
- * Toast de notificação que se auto-dispenssa após 3 segundos.
+ * Toast de notificação que se auto-dispensa após 3 segundos.
  */
 export function FaqToast({ message, variant, onDismiss }: Props) {
   useEffect(() => {

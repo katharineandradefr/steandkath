@@ -6,7 +6,6 @@ import {
   type Model,
 } from "mongoose";
 
-import { ALL_PERMISSION_KEYS } from "~/shared/permissions";
 import { USER_ROLES } from "~/shared/user";
 
 const permissionMatrixSchema = new Schema(
@@ -43,7 +42,7 @@ export function isValidStoredMatrix(
     const roleMatrix = (value as Record<string, unknown>)[role];
     if (!roleMatrix || typeof roleMatrix !== "object") return false;
 
-    for (const key of ALL_PERMISSION_KEYS) {
+    for (const key of Object.keys(roleMatrix)) {
       const allowed = (roleMatrix as Record<string, unknown>)[key];
       if (typeof allowed !== "boolean") return false;
     }

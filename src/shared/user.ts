@@ -13,11 +13,14 @@ export const USER_ROLES: readonly UserRole[] = [
   "coordinator",
 ] as const;
 
+/** Chave localStorage: perfil salvo neste dispositivo. */
+export const PROFILE_SETUP_KEY = "steandkath-profile-setup-complete";
+
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   designer_1: "Designer 1",
   designer: "Designer",
-  sub_coordinator: "Subcordenador",
-  coordinator: "Cordenador Responsável",
+  sub_coordinator: "Subcoordenador",
+  coordinator: "Coordenador Responsável",
 };
 
 /** Papéis de design — não declaram projetos nem grande área no perfil. */

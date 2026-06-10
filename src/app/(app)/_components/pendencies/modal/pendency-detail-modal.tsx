@@ -27,6 +27,7 @@ type PendencyDetailModalProps = {
   open: boolean;
   mode: PendencyDetailModalMode;
   initialValues: Pendency | null;
+  readOnly?: boolean;
   onClose: () => void;
   onSave: (values: PendencyFormValues) => void;
   isSaving?: boolean;
@@ -39,6 +40,7 @@ export function PendencyDetailModal({
   open,
   mode,
   initialValues,
+  readOnly = false,
   onClose,
   onSave,
   isSaving = false,
@@ -198,27 +200,34 @@ export function PendencyDetailModal({
           />
         </div>
 
-        <footer className="flex shrink-0 justify-end gap-2 border-t border-sidebar-border px-5 py-4">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-sidebar-border px-5 py-4">
+          {readOnly ? (
+            <p className="mr-auto text-sm text-white/55" role="status">
+              Somente leitura
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
             className="rounded-lg px-4 py-2 text-sm text-white/65 transition hover:text-white disabled:opacity-50"
           >
-            Cancelar
+            {readOnly ? "Fechar" : "Cancelar"}
           </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-bright disabled:opacity-50"
-          >
-            {isSaving
-              ? "Salvando…"
-              : mode === "create"
-                ? "Criar"
-                : "Salvar"}
-          </button>
+          {!readOnly ? (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-bright disabled:opacity-50"
+            >
+              {isSaving
+                ? "Salvando…"
+                : mode === "create"
+                  ? "Criar"
+                  : "Salvar"}
+            </button>
+          ) : null}
         </footer>
       </div>
     </div>,

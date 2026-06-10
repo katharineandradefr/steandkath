@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import {
   createEmptyGoalDraft,
   getGoalProgress,
@@ -11,6 +12,7 @@ import {
   type Goal,
   type GoalStatus,
 } from "~/shared/goal";
+import { goalActionToPermissionKey } from "~/shared/permissions";
 import {
   PENDENCY_PROJECT_BAR_HEX,
   PENDENCY_PROJECT_KEYS,
@@ -159,8 +161,19 @@ export function GoalFormModal({
     buildFormFromGoal(null, null),
   );
   const [error, setError] = useState<string | null>(null);
+  const { can } = usePermissions();
 
   const utils = api.useUtils();
+
+  const selectableStatuses = useMemo(
+    () =>
+      GOAL_STATUSES.filter((status) => {
+        if (status === form.status) return true;
+        const key = goalActionToPermissionKey("update_status", status);
+        return can(key);
+      }),
+    [can, form.status],
+  );
 
   useEffect(() => {
     if (open) {
@@ -366,7 +379,7 @@ export function GoalFormModal({
               }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
             >
-              {GOAL_STATUSES.map((status) => (
+              {selectableStatuses.map((status) => (
                 <option key={status} value={status}>
                   {GOAL_STATUS_LABELS[status]}
                 </option>

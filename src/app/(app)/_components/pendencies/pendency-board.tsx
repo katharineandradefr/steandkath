@@ -20,7 +20,6 @@ import {
   filterPendenciesBySearch,
   filterPendenciesByUrgencies,
   groupPendenciesByStatus,
-  PENDENCY_STATUSES,
   stripHtmlToPlainText,
   type Pendency,
   type PendencyAreaKey,
@@ -28,11 +27,16 @@ import {
   type PendencyProjectKey,
   type PendencyUrgency,
 } from "~/shared/pendency";
+import { usePermissions } from "~/app/_components/active-user-provider";
 import { usePendencyNavigation } from "~/app/_components/pendency-navigation-provider";
+import {
+  getVisiblePendencyStatuses,
+  pendencyActionToPermissionKey,
+} from "~/shared/permissions";
 import { api } from "~/trpc/react";
 
 import { PendencyDetailModal } from "./modal/pendency-detail-modal";
-import { applyDragEnd } from "./pendency-board-utils";
+import { applyDragEnd, resolveTargetStatus } from "./pendency-board-utils";
 import { PendencyBoardHeader } from "./pendency-board-header";
 import { PendencyCard } from "./pendency-card";
 import { PendencyColumn } from "./pendency-column";
@@ -65,6 +69,14 @@ export function PendencyBoard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingPendency, setEditingPendency] = useState<Pendency | null>(null);
+  const { can, role } = usePermissions();
+
+  const canEdit = can("pendency.edit");
+  const canDelete = can("pendency.delete");
+  const visibleStatuses = useMemo(
+    () => getVisiblePendencyStatuses(role),
+    [role],
+  );
 
   const listInput = {};
   const { data: pendencies = [], isLoading, isError } =
@@ -288,11 +300,30 @@ export function PendencyBoard() {
     setActiveDragId(null);
     if (!over) return;
 
-    const next = applyDragEnd(
-      pendencies,
-      String(active.id),
-      String(over.id),
-    );
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const activePendency = pendencies.find((p) => p.id === activeId);
+    if (!activePendency) return;
+
+    const targetStatus = resolveTargetStatus(pendencies, overId);
+    if (!targetStatus) return;
+
+    if (!visibleStatuses.includes(targetStatus)) {
+      return;
+    }
+
+    if (targetStatus !== activePendency.status) {
+      const key = pendencyActionToPermissionKey("set_status", targetStatus);
+      if (!can(key)) {
+        window.alert("Você não tem permissão para mover para esta coluna.");
+        return;
+      }
+    } else if (!canEdit) {
+      window.alert("Você não tem permissão para reordenar pendências.");
+      return;
+    }
+
+    const next = applyDragEnd(pendencies, activeId, overId);
     setListCache(() => next);
     reorderMutation.mutate({ moves: buildReorderMoves(next) });
   };
@@ -344,13 +375,13 @@ export function PendencyBoard() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden">
-            {PENDENCY_STATUSES.map((status) => (
+            {visibleStatuses.map((status) => (
               <PendencyColumn
                 key={status}
                 status={status}
                 pendencies={grouped[status]}
                 onOpen={openEdit}
-                onDelete={handleDelete}
+                onDelete={canDelete ? handleDelete : undefined}
               />
             ))}
           </div>
@@ -370,6 +401,7 @@ export function PendencyBoard() {
           initialValues={
             modalMode === "edit" ? editingPendency : null
           }
+          readOnly={modalMode === "edit" && !canEdit}
           onClose={() => setModalOpen(false)}
           onSave={handleSave}
           isSaving={isSaving}
