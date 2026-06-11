@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 
 import { usePermissions } from "~/app/_components/active-user-provider";
 import { CalendarSidePanel } from "~/app/(app)/calendario/_components/calendar-side-panel";
-import { CreatePendencyModal } from "~/app/(app)/calendario/_components/create-pendency-modal";
 import { GoalFormModal } from "~/app/(app)/calendario/_components/goal-form-modal";
 import { MonthCalendar } from "~/app/(app)/calendario/_components/month-calendar";
 import { getUtcTodayStart } from "~/app/(app)/calendario/_utils/calendar-grid";
@@ -24,7 +23,6 @@ export function CalendarDashboard({
   initialMonth,
 }: CalendarDashboardProps) {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [isPendencyModalOpen, setIsPendencyModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [goalReadOnly, setGoalReadOnly] = useState(false);
@@ -154,7 +152,6 @@ export function CalendarDashboard({
                 selectedGoalId={selectedGoalId}
                 weekReferenceDate={weekReferenceDate}
                 onSelectGoal={setSelectedGoalId}
-                onOpenCreatePendency={() => setIsPendencyModalOpen(true)}
                 onCreateGoal={handleCreateGoal}
                 onEditGoal={handleEditGoal}
                 onCompleteGoal={handleCompleteGoal}
@@ -165,11 +162,6 @@ export function CalendarDashboard({
           </div>
         </div>
       </div>
-
-      <CreatePendencyModal
-        open={isPendencyModalOpen}
-        onClose={() => setIsPendencyModalOpen(false)}
-      />
 
       <GoalFormModal
         open={modalOpen}

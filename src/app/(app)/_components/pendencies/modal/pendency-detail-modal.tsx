@@ -18,6 +18,7 @@ import { ModalAttachments } from "./modal-attachments";
 import { ModalChecklist } from "./modal-checklist";
 import { ModalDirectResponsible } from "./modal-direct-responsible";
 import { ModalLinks } from "./modal-links";
+import { ModalSolver } from "./modal-solver";
 import { ModalTagsRow } from "./modal-tags-row";
 import { ModalTitleField } from "./modal-title-field";
 
@@ -207,6 +208,12 @@ export function PendencyDetailModal({
               />
             )}
           </section>
+
+          <ModalSolver
+            solverId={draft.solverId ?? null}
+            readOnly={readOnly}
+            onSolverChange={(solverId) => patch({ solverId })}
+          />
 
           <ModalAttachments
             attachments={draft.attachments}

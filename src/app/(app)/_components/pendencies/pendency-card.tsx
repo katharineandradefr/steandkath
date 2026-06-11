@@ -14,6 +14,7 @@ import {
 
 type PendencyCardProps = {
   pendency: Pendency;
+  solverName?: string | null;
   onOpen?: (pendency: Pendency) => void;
   onDelete?: (id: string) => void;
 };
@@ -21,7 +22,12 @@ type PendencyCardProps = {
 /**
  * Cartão arrastável de uma pendência.
  */
-export function PendencyCard({ pendency, onOpen, onDelete }: PendencyCardProps) {
+export function PendencyCard({
+  pendency,
+  solverName,
+  onOpen,
+  onDelete,
+}: PendencyCardProps) {
   const {
     attributes,
     listeners,
@@ -83,6 +89,12 @@ export function PendencyCard({ pendency, onOpen, onDelete }: PendencyCardProps) 
           </h3>
           {excerpt ? (
             <p className="mt-1 line-clamp-2 text-xs text-zinc-600">{excerpt}</p>
+          ) : null}
+          {solverName ? (
+            <p className="mt-1.5 text-xs text-zinc-500">
+              <span className="font-medium text-zinc-700">Solucionador:</span>{" "}
+              {solverName}
+            </p>
           ) : null}
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span

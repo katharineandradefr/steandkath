@@ -82,6 +82,15 @@ export function PendencyBoard() {
   const listInput = {};
   const { data: pendencies = [], isLoading, isError } =
     api.pendency.list.useQuery(listInput);
+  const { data: users = [] } = api.user.list.useQuery();
+
+  const userNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const user of users) {
+      map[user.id] = user.name;
+    }
+    return map;
+  }, [users]);
 
   const setListCache = (updater: (prev: Pendency[]) => Pendency[]) => {
     utils.pendency.list.setData(listInput, (prev) =>
@@ -109,6 +118,7 @@ export function PendencyBoard() {
         links: input.links ?? [],
         checklist: input.checklist ?? [],
         directResponsibleId: input.directResponsibleId ?? null,
+        solverId: input.solverId ?? null,
         createdAt: now,
         updatedAt: now,
       };
@@ -156,6 +166,8 @@ export function PendencyBoard() {
               patch.directResponsibleId !== undefined
                 ? patch.directResponsibleId
                 : p.directResponsibleId,
+            solverId:
+              patch.solverId !== undefined ? patch.solverId : p.solverId,
             updatedAt: new Date().toISOString(),
           };
         }),
@@ -307,6 +319,7 @@ export function PendencyBoard() {
       checklist: values.checklist,
       attachments: values.attachments,
       directResponsibleId: values.directResponsibleId ?? null,
+      solverId: values.solverId ?? null,
     };
 
     if (modalMode === "create") {
@@ -427,6 +440,7 @@ export function PendencyBoard() {
                 status={column.columnId}
                 label={column.label}
                 pendencies={grouped[column.columnId]}
+                userNameById={userNameById}
                 onOpen={openEdit}
                 onDelete={canDelete ? handleDelete : undefined}
               />
@@ -436,7 +450,14 @@ export function PendencyBoard() {
           <DragOverlay dropAnimation={null}>
             {activePendency ? (
               <div className="w-[260px] rotate-2 opacity-95">
-                <PendencyCard pendency={activePendency} />
+                <PendencyCard
+                  pendency={activePendency}
+                  solverName={
+                    activePendency.solverId
+                      ? userNameById[activePendency.solverId] ?? null
+                      : null
+                  }
+                />
               </div>
             ) : null}
           </DragOverlay>

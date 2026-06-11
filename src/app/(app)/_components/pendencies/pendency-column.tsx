@@ -23,11 +23,6 @@ const STATUS_TINTS: Record<
     header: "pendency-col-header border-red-300",
     counter: "pendency-col-counter bg-red-200 text-red-900",
   },
-  waiting_someone: {
-    section: "pendency-col pendency-col--waiting border-orange-300 bg-orange-100",
-    header: "pendency-col-header border-orange-300",
-    counter: "pendency-col-counter bg-orange-200 text-orange-900",
-  },
   in_review: {
     section: "pendency-col pendency-col--review border-amber-300 bg-amber-100",
     header: "pendency-col-header border-amber-300",
@@ -49,6 +44,7 @@ type PendencyColumnProps = {
   status: PendencyStatus;
   label?: string;
   pendencies: Pendency[];
+  userNameById?: Record<string, string>;
   onOpen?: (pendency: Pendency) => void;
   onDelete?: (id: string) => void;
 };
@@ -60,6 +56,7 @@ export function PendencyColumn({
   status,
   label,
   pendencies,
+  userNameById = {},
   onOpen,
   onDelete,
 }: PendencyColumnProps) {
@@ -103,6 +100,9 @@ export function PendencyColumn({
             <PendencyCard
               key={p.id}
               pendency={p}
+              solverName={
+                p.solverId ? userNameById[p.solverId] ?? null : null
+              }
               onOpen={onOpen}
               onDelete={onDelete}
             />

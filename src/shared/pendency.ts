@@ -5,7 +5,6 @@
 
 export type PendencyStatus =
   | "pending"
-  | "waiting_someone"
   | "in_review"
   | "fixed"
   | "finished";
@@ -105,6 +104,8 @@ export type Pendency = {
   professorResponsible?: string | null;
   /** Id da conversa do chat (contato responsável direto). */
   directResponsibleId?: string | null;
+  /** Id do usuário solucionador da pendência. */
+  solverId?: string | null;
   dueDate?: string | null;
   recurrence?: PendencyRecurrence;
   createdAt: string;
@@ -113,7 +114,6 @@ export type Pendency = {
 
 export const PENDENCY_STATUSES: readonly PendencyStatus[] = [
   "pending",
-  "waiting_someone",
   "in_review",
   "fixed",
   "finished",
@@ -204,7 +204,6 @@ export const PENDENCY_RECURRENCE_LABELS: Record<PendencyRecurrence, string> = {
 
 export const PENDENCY_STATUS_LABELS: Record<PendencyStatus, string> = {
   pending: "Pendente",
-  waiting_someone: "Aguardando alguém",
   in_review: "Em análise",
   fixed: "Corrigido",
   finished: "Concluído",
@@ -365,6 +364,7 @@ export function createEmptyPendencyDraft(
     audience: null,
     professorResponsible: null,
     directResponsibleId: null,
+    solverId: null,
     dueDate: null,
     recurrence: "none",
     createdAt: now,

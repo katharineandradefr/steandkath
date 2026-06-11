@@ -566,20 +566,6 @@ html[data-theme="dark"] .pendency-col--pending .pendency-col-counter {
   color: #fecaca !important;
 }
 
-html[data-theme="dark"] .pendency-col--waiting {
-  background-color: #3d2814 !important;
-  border-color: #f97316 !important;
-}
-
-html[data-theme="dark"] .pendency-col--waiting .pendency-col-header {
-  border-color: #f97316 !important;
-}
-
-html[data-theme="dark"] .pendency-col--waiting .pendency-col-counter {
-  background-color: #9a3412 !important;
-  color: #fed7aa !important;
-}
-
 html[data-theme="dark"] .pendency-col--review {
   background-color: #3d3514 !important;
   border-color: #fbbf24 !important;

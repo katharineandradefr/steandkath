@@ -102,6 +102,7 @@ const pendencyWriteFieldsSchema = z.object({
   audience: audienceSchema.nullable().optional(),
   professorResponsible: z.string().max(200).nullable().optional(),
   directResponsibleId: z.string().max(50).nullable().optional(),
+  solverId: z.string().max(50).nullable().optional(),
   dueDate: z.coerce.date().nullable().optional(),
   recurrence: recurrenceSchema.default("none"),
 });
@@ -138,6 +139,11 @@ export const pendencyRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ input }) => {
+      await PendencyModel.updateMany(
+        { status: "waiting_someone" },
+        { $set: { status: "in_review" } },
+      ).exec();
+
       const { role } = await getCurrentUserPermissionContext();
       const visibleStatuses = getPendencyListStatuses(role);
       const filter: Record<string, unknown> = {
@@ -202,6 +208,7 @@ export const pendencyRouter = createTRPCRouter({
         audience: input.audience ?? null,
         professorResponsible: input.professorResponsible ?? null,
         directResponsibleId: input.directResponsibleId ?? null,
+        solverId: input.solverId ?? null,
         dueDate: input.dueDate ? normalizeDueDate(input.dueDate) : null,
         recurrence: input.recurrence ?? "none",
       });
@@ -268,6 +275,9 @@ export const pendencyRouter = createTRPCRouter({
       }
       if (patch.directResponsibleId !== undefined) {
         existing.directResponsibleId = patch.directResponsibleId;
+      }
+      if (patch.solverId !== undefined) {
+        existing.solverId = patch.solverId;
       }
       if (patch.dueDate !== undefined) {
         existing.dueDate = patch.dueDate ? normalizeDueDate(patch.dueDate) : null;

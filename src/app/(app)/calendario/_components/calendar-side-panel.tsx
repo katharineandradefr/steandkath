@@ -33,7 +33,6 @@ type CalendarSidePanelProps = {
   selectedGoalId: string | null;
   weekReferenceDate: Date;
   onSelectGoal: (goalId: string | null) => void;
-  onOpenCreatePendency: () => void;
   onCreateGoal: () => void;
   onEditGoal: (goal: Goal) => void;
   onCompleteGoal: (goal: Goal) => void;
@@ -76,7 +75,6 @@ export function CalendarSidePanel({
   selectedGoalId,
   weekReferenceDate,
   onSelectGoal,
-  onOpenCreatePendency,
   onCreateGoal,
   onEditGoal,
   onCompleteGoal,
@@ -89,8 +87,6 @@ export function CalendarSidePanel({
   const [activeProject, setActiveProject] =
     useState<PendencyProjectKey>("extensivo");
   const [viewMode, setViewMode] = useState<ViewMode>("project");
-  const [createMenuOpen, setCreateMenuOpen] = useState(false);
-  const createMenuRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const { can } = usePermissions();
 
@@ -99,7 +95,6 @@ export function CalendarSidePanel({
   const canViewGoal = can("goal.view");
   const canCompleteGoal = can("goal.complete");
   const canDeleteGoal = can("goal.delete");
-  const canCreatePendency = can("pendency.create");
 
   const dayGoals = useMemo(() => {
     if (!selectedDay) return [];
@@ -114,24 +109,6 @@ export function CalendarSidePanel({
     }
   }, [selectedDay, dayGoals.length]);
 
-  useEffect(() => {
-    if (!createMenuOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (!createMenuRef.current?.contains(e.target as Node)) {
-        setCreateMenuOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setCreateMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [createMenuOpen]);
-
   const filteredGoals = filterGoalsByProject(monthGoals, activeProject);
   const displayedGoals = viewMode === "day" ? dayGoals : filteredGoals;
   const selectedGoal =
@@ -144,7 +121,6 @@ export function CalendarSidePanel({
     (selectedGoal === null && canCreateGoal);
   const showViewGoal =
     selectedGoal !== null && canViewGoal && !canEditGoal;
-  const showCreateMenu = canCreateGoal || canCreatePendency;
 
   const handleSelectProject = (key: PendencyProjectKey) => {
     setViewMode("project");
@@ -266,54 +242,15 @@ export function CalendarSidePanel({
         </div>
 
         <div className="mt-3 flex items-center gap-3 border-t border-white/20 pt-3">
-          {showCreateMenu ? (
-            <div ref={createMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setCreateMenuOpen((o) => !o)}
-                aria-haspopup="menu"
-                aria-expanded={createMenuOpen}
-                aria-label="Adicionar"
-                className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              >
-                <Plus className="h-5 w-5" aria-hidden />
-              </button>
-              {createMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute bottom-full left-0 mb-2 min-w-[140px] overflow-hidden rounded-lg border border-white/15 bg-white text-sm text-gray-900 shadow-lg"
-                >
-                  {canCreateGoal ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setCreateMenuOpen(false);
-                        onCreateGoal();
-                      }}
-                      className="block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                    >
-                      Meta
-                    </button>
-                  ) : null}
-                  {canCreatePendency ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setCreateMenuOpen(false);
-                        onOpenCreatePendency();
-                      }}
-                      className={`block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
-                        canCreateGoal ? "border-t border-gray-100" : ""
-                      }`}
-                    >
-                      Pendência
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </div>
+          {canCreateGoal ? (
+            <button
+              type="button"
+              onClick={onCreateGoal}
+              aria-label="Adicionar meta"
+              className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <Plus className="h-5 w-5" aria-hidden />
+            </button>
           ) : null}
           {showViewGoal ? (
             <button

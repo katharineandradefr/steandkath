@@ -86,6 +86,7 @@ export function docToPendency(doc: PendencyDoc): Pendency {
     audience: doc.audience ?? null,
     professorResponsible: doc.professorResponsible ?? null,
     directResponsibleId: doc.directResponsibleId ?? null,
+    solverId: doc.solverId ?? null,
     dueDate: doc.dueDate ? doc.dueDate.toISOString() : null,
     recurrence: doc.recurrence ?? "none",
     createdAt: doc.createdAt.toISOString(),

@@ -82,6 +82,7 @@ const pendencySchema = new Schema(
     },
     professorResponsible: { type: String, default: null },
     directResponsibleId: { type: String, default: null },
+    solverId: { type: String, default: null },
     dueDate: { type: Date, default: null, index: true },
     recurrence: {
       type: String,

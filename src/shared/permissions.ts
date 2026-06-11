@@ -290,10 +290,7 @@ export function goalActionToPermissionKey(
   }
 }
 
-const PENDENCY_STATUS_PERMISSION_KEYS: Record<
-  Exclude<PendencyStatus, "waiting_someone">,
-  PermissionKey
-> = {
+const PENDENCY_STATUS_PERMISSION_KEYS: Record<PendencyStatus, PermissionKey> = {
   pending: "pendency.status_pending",
   in_review: "pendency.status_in_review",
   fixed: "pendency.status_corrected",
@@ -321,7 +318,7 @@ export function pendencyActionToPermissionKey(
     case "delete":
       return "pendency.delete";
     case "set_status":
-      if (!status || status === "waiting_someone") return "pendency.edit";
+      if (!status) return "pendency.edit";
       return PENDENCY_STATUS_PERMISSION_KEYS[status];
   }
 }
@@ -351,12 +348,6 @@ const COORDINATION_BOARD_COLUMNS: PendencyBoardColumn[] = [
     label: "Pendente",
     sourceStatuses: ["pending", "in_review"],
     dropTargetStatus: "in_review",
-  },
-  {
-    columnId: "waiting_someone",
-    label: "Aguardando alguém",
-    sourceStatuses: ["waiting_someone"],
-    dropTargetStatus: "waiting_someone",
   },
   {
     columnId: "fixed",
