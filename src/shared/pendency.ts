@@ -93,6 +93,7 @@ export type Pendency = {
   /** @deprecated Preferir descriptionMarkdown; mantido para compatibilidade no card. */
   description?: string | null;
   descriptionMarkdown: string;
+  solutionMarkdown: string;
   projectKey: PendencyProjectKey;
   status: PendencyStatus;
   urgency: PendencyUrgency;
@@ -204,9 +205,9 @@ export const PENDENCY_RECURRENCE_LABELS: Record<PendencyRecurrence, string> = {
 export const PENDENCY_STATUS_LABELS: Record<PendencyStatus, string> = {
   pending: "Pendente",
   waiting_someone: "Aguardando alguém",
-  in_review: "Em revisão",
+  in_review: "Em análise",
   fixed: "Corrigido",
-  finished: "Finalizado",
+  finished: "Concluído",
 };
 
 export const PENDENCY_URGENCY_LABELS: Record<PendencyUrgency, string> = {
@@ -353,6 +354,7 @@ export function createEmptyPendencyDraft(
     title: "",
     description: null,
     descriptionMarkdown: "",
+    solutionMarkdown: "",
     projectKey: DEFAULT_PROJECT_KEY,
     status: "pending",
     urgency: "medium",

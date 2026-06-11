@@ -33,6 +33,11 @@ export function showsProfileProjectsAndArea(role: UserRole): boolean {
   return role === "coordinator" || role === "sub_coordinator";
 }
 
+/** Coordenador ou subcoordenador — visão operacional do Kanban. */
+export function isCoordinationRole(role: UserRole | null | undefined): boolean {
+  return role === "coordinator" || role === "sub_coordinator";
+}
+
 export type User = {
   id: string;
   name: string;

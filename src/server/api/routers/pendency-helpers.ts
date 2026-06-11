@@ -56,6 +56,7 @@ export function docToPendency(doc: PendencyDoc): Pendency {
     title: doc.title,
     description: doc.description ?? null,
     descriptionMarkdown: doc.descriptionMarkdown,
+    solutionMarkdown: doc.solutionMarkdown ?? "",
     projectKey: doc.projectKey,
     status: doc.status,
     urgency: doc.urgency,

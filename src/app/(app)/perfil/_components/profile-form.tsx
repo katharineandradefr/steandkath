@@ -76,6 +76,7 @@ export function ProfileForm() {
       setSaveMessage("Perfil salvo com sucesso.");
       setSaveError(null);
       await utils.user.invalidate();
+      await utils.pendency.list.invalidate();
     },
     onError: (error) => {
       setSaveError(

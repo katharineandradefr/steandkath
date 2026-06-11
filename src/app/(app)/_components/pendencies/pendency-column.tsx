@@ -47,6 +47,7 @@ const STATUS_TINTS: Record<
 
 type PendencyColumnProps = {
   status: PendencyStatus;
+  label?: string;
   pendencies: Pendency[];
   onOpen?: (pendency: Pendency) => void;
   onDelete?: (id: string) => void;
@@ -57,6 +58,7 @@ type PendencyColumnProps = {
  */
 export function PendencyColumn({
   status,
+  label,
   pendencies,
   onOpen,
   onDelete,
@@ -68,17 +70,18 @@ export function PendencyColumn({
 
   const itemIds = pendencies.map((p) => p.id);
   const tint = STATUS_TINTS[status];
+  const columnLabel = label ?? PENDENCY_STATUS_LABELS[status];
 
   return (
     <section
       className={`flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col rounded-2xl border shadow-sm ${tint.section}`}
-      aria-label={PENDENCY_STATUS_LABELS[status]}
+      aria-label={columnLabel}
     >
       <header
         className={`flex items-center justify-between gap-2 border-b px-3 py-3 ${tint.header}`}
       >
         <h2 className="text-sm font-semibold text-calendar-bordeaux">
-          {PENDENCY_STATUS_LABELS[status]}
+          {columnLabel}
         </h2>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${tint.counter}`}

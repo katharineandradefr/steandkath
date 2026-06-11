@@ -10,7 +10,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -19,7 +19,6 @@ import {
   filterPendenciesByProjects,
   filterPendenciesBySearch,
   filterPendenciesByUrgencies,
-  groupPendenciesByStatus,
   stripHtmlToPlainText,
   type Pendency,
   type PendencyAreaKey,
@@ -30,13 +29,18 @@ import {
 import { usePermissions } from "~/app/_components/active-user-provider";
 import { usePendencyNavigation } from "~/app/_components/pendency-navigation-provider";
 import {
-  getVisiblePendencyStatuses,
+  getPendencyBoardColumns,
   pendencyActionToPermissionKey,
+  shouldPickupPendencyOnView,
 } from "~/shared/permissions";
 import { api } from "~/trpc/react";
 
 import { PendencyDetailModal } from "./modal/pendency-detail-modal";
-import { applyDragEnd, resolveTargetStatus } from "./pendency-board-utils";
+import {
+  applyBoardDragEnd,
+  groupPendenciesByBoardColumns,
+  resolveBoardDropTarget,
+} from "./pendency-board-utils";
 import { PendencyBoardHeader } from "./pendency-board-header";
 import { PendencyCard } from "./pendency-card";
 import { PendencyColumn } from "./pendency-column";
@@ -73,10 +77,7 @@ export function PendencyBoard() {
 
   const canEdit = can("pendency.edit");
   const canDelete = can("pendency.delete");
-  const visibleStatuses = useMemo(
-    () => getVisiblePendencyStatuses(role),
-    [role],
-  );
+  const boardColumns = useMemo(() => getPendencyBoardColumns(role), [role]);
 
   const listInput = {};
   const { data: pendencies = [], isLoading, isError } =
@@ -99,6 +100,7 @@ export function PendencyBoard() {
         title: input.title,
         description: null,
         descriptionMarkdown: input.descriptionMarkdown ?? "",
+        solutionMarkdown: input.solutionMarkdown ?? "",
         projectKey: input.projectKey,
         status: "pending",
         urgency: input.urgency,
@@ -135,6 +137,8 @@ export function PendencyBoard() {
           if (p.id !== id) return p;
           const descriptionMarkdown =
             patch.descriptionMarkdown ?? p.descriptionMarkdown;
+          const solutionMarkdown =
+            patch.solutionMarkdown ?? p.solutionMarkdown;
           const plain = stripHtmlToPlainText(descriptionMarkdown);
           const excerpt = plain.split("\n")[0]?.trim() ?? "";
           return {
@@ -142,6 +146,7 @@ export function PendencyBoard() {
             title: patch.title ?? p.title,
             areaKey: patch.areaKey ?? p.areaKey,
             descriptionMarkdown,
+            solutionMarkdown,
             description: excerpt.length > 0 ? excerpt : null,
             projectKey: patch.projectKey ?? p.projectKey,
             urgency: patch.urgency ?? p.urgency,
@@ -189,6 +194,17 @@ export function PendencyBoard() {
     },
   });
 
+  const pickupMutation = api.pendency.pickup.useMutation({
+    onSuccess: (saved) => {
+      setListCache((prev) =>
+        prev.map((p) => (p.id === saved.id ? saved : p)),
+      );
+    },
+    onSettled: () => {
+      void utils.pendency.list.invalidate(listInput);
+    },
+  });
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -204,8 +220,8 @@ export function PendencyBoard() {
   }, [pendencies, urgencyFilters, areaFilters, projectFilters, searchQuery]);
 
   const grouped = useMemo(
-    () => groupPendenciesByStatus(filtered),
-    [filtered],
+    () => groupPendenciesByBoardColumns(filtered, boardColumns),
+    [filtered, boardColumns],
   );
 
   const activePendency = activeDragId
@@ -220,11 +236,29 @@ export function PendencyBoard() {
     setModalOpen(true);
   };
 
-  const openEdit = (pendency: Pendency) => {
-    setModalMode("edit");
-    setEditingPendency(pendency);
-    setModalOpen(true);
-  };
+  const openEdit = useCallback(
+    (pendency: Pendency) => {
+      const showModal = (item: Pendency) => {
+        setModalMode("edit");
+        setEditingPendency(item);
+        setModalOpen(true);
+      };
+
+      if (shouldPickupPendencyOnView(role, pendency.status)) {
+        pickupMutation.mutate(
+          { id: pendency.id },
+          {
+            onSuccess: (saved) => showModal(saved),
+            onError: () => showModal(pendency),
+          },
+        );
+        return;
+      }
+
+      showModal(pendency);
+    },
+    [role, pickupMutation],
+  );
 
   const pendenciaFromUrl = searchParams.get("pendencia");
 
@@ -236,11 +270,9 @@ export function PendencyBoard() {
     if (!pendency) return;
 
     openedFromUrlRef.current = pendenciaFromUrl;
-    setModalMode("edit");
-    setEditingPendency(pendency);
-    setModalOpen(true);
+    openEdit(pendency);
     router.replace("/", { scroll: false });
-  }, [pendenciaFromUrl, isLoading, pendencies, router]);
+  }, [pendenciaFromUrl, isLoading, pendencies, router, openEdit]);
 
   useEffect(() => {
     if (!isNavigating || !modalOpen || !openedFromUrlRef.current) return;
@@ -268,6 +300,7 @@ export function PendencyBoard() {
       areaKey: values.areaKey,
       title: values.title,
       descriptionMarkdown: values.descriptionMarkdown,
+      solutionMarkdown: values.solutionMarkdown,
       projectKey: values.projectKey,
       urgency: values.urgency,
       links: values.links,
@@ -305,25 +338,38 @@ export function PendencyBoard() {
     const activePendency = pendencies.find((p) => p.id === activeId);
     if (!activePendency) return;
 
-    const targetStatus = resolveTargetStatus(pendencies, overId);
-    if (!targetStatus) return;
+    const drop = resolveBoardDropTarget(
+      pendencies,
+      activeId,
+      overId,
+      boardColumns,
+    );
+    if (!drop) return;
 
-    if (!visibleStatuses.includes(targetStatus)) {
-      return;
-    }
+    const statusChanged = drop.targetStatus !== activePendency.status;
 
-    if (targetStatus !== activePendency.status) {
-      const key = pendencyActionToPermissionKey("set_status", targetStatus);
+    if (statusChanged) {
+      const key = pendencyActionToPermissionKey("set_status", drop.targetStatus);
       if (!can(key)) {
         window.alert("Você não tem permissão para mover para esta coluna.");
         return;
       }
-    } else if (!canEdit) {
-      window.alert("Você não tem permissão para reordenar pendências.");
-      return;
+    } else if (!canEdit && !can("pendency.edit_checklist")) {
+      const canReorderStatus = can(
+        pendencyActionToPermissionKey("set_status", activePendency.status),
+      );
+      if (!canReorderStatus) {
+        window.alert("Você não tem permissão para reordenar pendências.");
+        return;
+      }
     }
 
-    const next = applyDragEnd(pendencies, activeId, overId);
+    const next = applyBoardDragEnd(
+      pendencies,
+      activeId,
+      overId,
+      boardColumns,
+    );
     setListCache(() => next);
     reorderMutation.mutate({ moves: buildReorderMoves(next) });
   };
@@ -375,11 +421,12 @@ export function PendencyBoard() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden">
-            {visibleStatuses.map((status) => (
+            {boardColumns.map((column) => (
               <PendencyColumn
-                key={status}
-                status={status}
-                pendencies={grouped[status]}
+                key={column.columnId}
+                status={column.columnId}
+                label={column.label}
+                pendencies={grouped[column.columnId]}
                 onOpen={openEdit}
                 onDelete={canDelete ? handleDelete : undefined}
               />

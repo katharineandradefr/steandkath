@@ -37,7 +37,7 @@ export function PendencyBoardHeader({
   onCreateClick,
 }: PendencyBoardHeaderProps) {
   const { can } = usePermissions();
-  const canCreate = can("pendency.edit");
+  const canCreate = can("pendency.create");
 
   const areaTitle =
     areaFilters.length === 1

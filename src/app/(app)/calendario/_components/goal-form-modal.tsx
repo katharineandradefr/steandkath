@@ -25,6 +25,7 @@ type GoalFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   goal: Goal | null;
+  readOnly?: boolean;
   initialStartDate?: Date | null;
   onClose: () => void;
   onSuccess: () => void;
@@ -153,6 +154,7 @@ export function GoalFormModal({
   open,
   mode,
   goal,
+  readOnly = false,
   initialStartDate = null,
   onClose,
   onSuccess,
@@ -206,6 +208,12 @@ export function GoalFormModal({
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const fieldDisabled = readOnly || isPending;
+  const modalTitle = readOnly
+    ? "Detalhes da meta"
+    : mode === "create"
+      ? "Nova meta"
+      : "Editar meta";
 
   if (!open) return null;
 
@@ -293,7 +301,7 @@ export function GoalFormModal({
       <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white p-6 text-gray-900 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="goal-modal-title" className="text-lg font-semibold text-gray-900">
-            {mode === "create" ? "Nova meta" : "Editar meta"}
+            {modalTitle}
           </h2>
           <button
             type="button"
@@ -315,7 +323,8 @@ export function GoalFormModal({
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+              disabled={fieldDisabled}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
               maxLength={500}
               required
             />
@@ -325,10 +334,16 @@ export function GoalFormModal({
             <span className="mb-1 block text-sm font-medium text-gray-700">
               Projeto
             </span>
-            <ProjectTagSelect
-              value={form.projectKey}
-              onChange={(key) => setForm((f) => ({ ...f, projectKey: key }))}
-            />
+            {readOnly ? (
+              <p className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-800">
+                {PENDENCY_PROJECT_LABELS[form.projectKey]}
+              </p>
+            ) : (
+              <ProjectTagSelect
+                value={form.projectKey}
+                onChange={(key) => setForm((f) => ({ ...f, projectKey: key }))}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -343,7 +358,8 @@ export function GoalFormModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, startDate: e.target.value }))
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                disabled={fieldDisabled}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
                 required
               />
             </div>
@@ -358,7 +374,8 @@ export function GoalFormModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, dueDate: e.target.value }))
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                disabled={fieldDisabled}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
                 required
               />
             </div>
@@ -377,7 +394,8 @@ export function GoalFormModal({
                   status: e.target.value as GoalStatus,
                 }))
               }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+              disabled={fieldDisabled}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
             >
               {selectableStatuses.map((status) => (
                 <option key={status} value={status}>
@@ -407,7 +425,8 @@ export function GoalFormModal({
                   setForm((f) => ({ ...f, progressUnit: e.target.value }))
                 }
                 placeholder="Ex.: fichas"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                disabled={fieldDisabled}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
                 maxLength={40}
               />
             </div>
@@ -428,7 +447,8 @@ export function GoalFormModal({
                   setForm((f) => ({ ...f, targetCount: e.target.value }))
                 }
                 placeholder="Ex.: 30"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                disabled={fieldDisabled}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
               />
             </div>
 
@@ -442,14 +462,16 @@ export function GoalFormModal({
                     Concluídas
                   </label>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => adjustDoneCount(-1)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-                      aria-label="Diminuir concluídas"
-                    >
-                      −
-                    </button>
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={() => adjustDoneCount(-1)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+                        aria-label="Diminuir concluídas"
+                      >
+                        −
+                      </button>
+                    ) : null}
                     <input
                       id="goal-done-count"
                       type="number"
@@ -459,16 +481,19 @@ export function GoalFormModal({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, doneCount: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+                      disabled={fieldDisabled}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
                     />
-                    <button
-                      type="button"
-                      onClick={() => adjustDoneCount(1)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-                      aria-label="Aumentar concluídas"
-                    >
-                      +
-                    </button>
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={() => adjustDoneCount(1)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+                        aria-label="Aumentar concluídas"
+                      >
+                        +
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -509,7 +534,8 @@ export function GoalFormModal({
               onChange={(e) =>
                 setForm((f) => ({ ...f, assigneeName: e.target.value }))
               }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+              disabled={fieldDisabled}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
               maxLength={200}
             />
           </div>
@@ -526,7 +552,8 @@ export function GoalFormModal({
                 setForm((f) => ({ ...f, assigneeAvatarUrl: e.target.value }))
               }
               placeholder="https://..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal"
+              disabled={fieldDisabled}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
             />
           </div>
 
@@ -543,15 +570,17 @@ export function GoalFormModal({
               disabled={isPending}
               className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
             >
-              Cancelar
+              {readOnly ? "Fechar" : "Cancelar"}
             </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-lg bg-calendar-cardinal px-4 py-2 text-sm font-medium text-white hover:bg-brand-bright disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-            >
-              {isPending ? "Salvando…" : mode === "create" ? "Criar meta" : "Salvar"}
-            </button>
+            {!readOnly ? (
+              <button
+                type="submit"
+                disabled={isPending}
+                className="rounded-lg bg-calendar-cardinal px-4 py-2 text-sm font-medium text-white hover:bg-brand-bright disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
+              >
+                {isPending ? "Salvando…" : mode === "create" ? "Criar meta" : "Salvar"}
+              </button>
+            ) : null}
           </div>
         </form>
       </div>

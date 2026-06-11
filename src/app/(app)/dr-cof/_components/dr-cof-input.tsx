@@ -6,13 +6,14 @@ import { ImageIcon, FileDown, BookOpen, Plus, Send } from "lucide-react";
 type Props = {
   onSend: (text: string) => void;
   onTeach: () => void;
+  canTeach?: boolean;
 };
 
 /**
  * Barra de input do Dr. Cof.
  * Botão "+" abre mini-modal com: Ensinar Dr. Cof, Anexar foto, Enviar arquivo.
  */
-export function DrCofInput({ onSend, onTeach }: Props) {
+export function DrCofInput({ onSend, onTeach, canTeach = false }: Props) {
   const [text, setText] = useState("");
   const [plusOpen, setPlusOpen] = useState(false);
   const imageRef = useRef<HTMLInputElement>(null);
@@ -49,14 +50,19 @@ export function DrCofInput({ onSend, onTeach }: Props) {
           <input ref={imageRef} type="file" accept="image/*" className="hidden" />
           <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" className="hidden" />
 
-          <button
-            type="button"
-            onClick={() => { onTeach(); setPlusOpen(false); }}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
-          >
-            <BookOpen className="h-4 w-4 text-[#5B0A0A]" />
-            <span>Ensinar Dr. Cof</span>
-          </button>
+          {canTeach ? (
+            <button
+              type="button"
+              onClick={() => {
+                onTeach();
+                setPlusOpen(false);
+              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              <BookOpen className="h-4 w-4 text-[#5B0A0A]" />
+              <span>Ensinar Dr. Cof</span>
+            </button>
+          ) : null}
 
           <button
             type="button"

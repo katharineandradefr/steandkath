@@ -1,10 +1,12 @@
 import {
   PENDENCY_STATUSES,
+  PENDENCY_STATUS_LABELS,
   type PendencyStatus,
 } from "~/shared/pendency";
 import { USER_ROLES, type UserRole } from "~/shared/user";
 
 export type PermissionKey =
+  | "pendency.create"
   | "pendency.edit"
   | "pendency.set_dates"
   | "pendency.edit_description"
@@ -30,7 +32,10 @@ export type PermissionKey =
   | "goal.status_in_progress"
   | "goal.status_completed"
   | "goal.status_postponed"
-  | "goal.status_cancelled";
+  | "goal.status_cancelled"
+  | "faq.edit"
+  | "ai.teach"
+  | "settings.access";
 
 export type PermissionGroup = {
   id: string;
@@ -46,6 +51,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     id: "pendencies",
     label: "Pendências",
     permissions: [
+      { key: "pendency.create", label: "Criar pendência" },
       { key: "pendency.edit", label: "Editar pendência" },
       { key: "pendency.set_dates", label: "Estabelecer datas (início / limite)" },
       { key: "pendency.edit_description", label: "Editar descrição" },
@@ -80,6 +86,15 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "goal.status_cancelled", label: "Status: Cancelado" },
     ],
   },
+  {
+    id: "platform",
+    label: "Plataforma",
+    permissions: [
+      { key: "faq.edit", label: "Editar FAQ" },
+      { key: "ai.teach", label: "Ensinar conteúdos à IA" },
+      { key: "settings.access", label: "Acessar configurações" },
+    ],
+  },
 ];
 
 export const ALL_PERMISSION_KEYS: PermissionKey[] = PERMISSION_GROUPS.flatMap(
@@ -93,6 +108,7 @@ export type PermissionMatrix = Record<UserRole, Record<PermissionKey, boolean>>;
  */
 export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
   designer_1: {
+    "pendency.create": true,
     "pendency.edit": true,
     "pendency.set_dates": true,
     "pendency.edit_description": true,
@@ -119,8 +135,12 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.status_completed": true,
     "goal.status_postponed": true,
     "goal.status_cancelled": true,
+    "faq.edit": true,
+    "ai.teach": true,
+    "settings.access": true,
   },
   designer: {
+    "pendency.create": true,
     "pendency.edit": true,
     "pendency.set_dates": false,
     "pendency.edit_description": true,
@@ -147,8 +167,12 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.status_completed": false,
     "goal.status_postponed": false,
     "goal.status_cancelled": false,
+    "faq.edit": true,
+    "ai.teach": false,
+    "settings.access": false,
   },
   coordinator: {
+    "pendency.create": true,
     "pendency.edit": true,
     "pendency.set_dates": true,
     "pendency.edit_description": true,
@@ -175,8 +199,12 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.status_completed": true,
     "goal.status_postponed": true,
     "goal.status_cancelled": true,
+    "faq.edit": false,
+    "ai.teach": false,
+    "settings.access": false,
   },
   sub_coordinator: {
+    "pendency.create": true,
     "pendency.edit": false,
     "pendency.set_dates": false,
     "pendency.edit_description": false,
@@ -197,12 +225,15 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     "goal.view": true,
     "goal.edit": false,
     "goal.delete": false,
-    "goal.complete": true,
+    "goal.complete": false,
     "goal.status_pending": false,
-    "goal.status_in_progress": true,
+    "goal.status_in_progress": false,
     "goal.status_completed": false,
     "goal.status_postponed": false,
     "goal.status_cancelled": false,
+    "faq.edit": false,
+    "ai.teach": false,
+    "settings.access": false,
   },
 };
 
@@ -284,6 +315,7 @@ export function pendencyActionToPermissionKey(
 ): PermissionKey {
   switch (action) {
     case "create":
+      return "pendency.create";
     case "update":
       return "pendency.edit";
     case "delete":
@@ -294,21 +326,98 @@ export function pendencyActionToPermissionKey(
   }
 }
 
-/** Colunas visíveis no board por papel (ausente = todas). */
-export const PENDENCY_VISIBLE_STATUSES_BY_ROLE: Partial<
-  Record<UserRole, PendencyStatus[]>
+export type PendencyBoardColumn = {
+  /** Id da coluna no drag-and-drop (chave visual). */
+  columnId: PendencyStatus;
+  label: string;
+  /** Status persistidos que aparecem nesta coluna. */
+  sourceStatuses: PendencyStatus[];
+  /** Status gravado ao soltar um card nesta coluna (vindo de outra). */
+  dropTargetStatus: PendencyStatus;
+};
+
+const DESIGNER_BOARD_COLUMNS: PendencyBoardColumn[] = PENDENCY_STATUSES.map(
+  (status) => ({
+    columnId: status,
+    label: PENDENCY_STATUS_LABELS[status],
+    sourceStatuses: [status],
+    dropTargetStatus: status,
+  }),
+);
+
+const COORDINATION_BOARD_COLUMNS: PendencyBoardColumn[] = [
+  {
+    columnId: "pending",
+    label: "Pendente",
+    sourceStatuses: ["pending", "in_review"],
+    dropTargetStatus: "in_review",
+  },
+  {
+    columnId: "waiting_someone",
+    label: "Aguardando alguém",
+    sourceStatuses: ["waiting_someone"],
+    dropTargetStatus: "waiting_someone",
+  },
+  {
+    columnId: "fixed",
+    label: "Corrigido",
+    sourceStatuses: ["fixed"],
+    dropTargetStatus: "fixed",
+  },
+];
+
+const PENDENCY_BOARD_COLUMNS_BY_ROLE: Partial<
+  Record<UserRole, PendencyBoardColumn[]>
 > = {
-  sub_coordinator: ["pending", "waiting_someone", "fixed"],
+  coordinator: COORDINATION_BOARD_COLUMNS,
+  sub_coordinator: COORDINATION_BOARD_COLUMNS,
 };
 
 /**
- * Retorna os status de pendência visíveis no board para o papel.
+ * Status buscados no servidor para o papel (inclui status ocultos como coluna).
+ */
+export function getPendencyListStatuses(
+  role: UserRole | null | undefined,
+): PendencyStatus[] {
+  const columns = getPendencyBoardColumns(role);
+  const statuses = new Set<PendencyStatus>();
+  for (const column of columns) {
+    for (const status of column.sourceStatuses) {
+      statuses.add(status);
+    }
+  }
+  return [...statuses];
+}
+
+/**
+ * Colunas do Kanban conforme o papel do usuário.
+ */
+export function getPendencyBoardColumns(
+  role: UserRole | null | undefined,
+): PendencyBoardColumn[] {
+  if (!role) return DESIGNER_BOARD_COLUMNS;
+  return PENDENCY_BOARD_COLUMNS_BY_ROLE[role] ?? DESIGNER_BOARD_COLUMNS;
+}
+
+/**
+ * @deprecated Use getPendencyListStatuses — mantido para compatibilidade.
  */
 export function getVisiblePendencyStatuses(
   role: UserRole | null | undefined,
 ): PendencyStatus[] {
-  if (!role) return [...PENDENCY_STATUSES];
-  return PENDENCY_VISIBLE_STATUSES_BY_ROLE[role] ?? [...PENDENCY_STATUSES];
+  return getPendencyListStatuses(role);
+}
+
+/**
+ * Indica se o papel deve assumir pendências pendentes ao abrir o modal.
+ */
+export function shouldPickupPendencyOnView(
+  role: UserRole | null | undefined,
+  status: PendencyStatus,
+): boolean {
+  return (
+    (role === "coordinator" || role === "sub_coordinator") && status === "pending"
+  );
 }
 
 /** Garante que todas as chaves existam para cada papel. */

@@ -19,6 +19,8 @@ import type {
   StatusValue,
   SubPanel,
 } from "./chat-types";
+import { buildConversationPreviewMessage } from "~/app/(app)/chat/_utils/conversation-preview";
+
 import { CONVERSATIONS, INITIAL_MESSAGES } from "./chat-data";
 import { DEFAULT_HISTORY_ENTRIES } from "./right-panels/historico-panel";
 import { ConversationList } from "./conversation-list";
@@ -150,7 +152,7 @@ export function ChatLayout() {
               ...conversation,
               conversationStatus: "em-atendimento",
               attendantName: senderName,
-              preview: text.slice(0, 80),
+              preview: buildConversationPreviewMessage(text),
             }
           : conversation,
       ),

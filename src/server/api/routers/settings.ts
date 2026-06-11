@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { assertPlatformPermission } from "~/server/auth/platform-permissions";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   PermissionMatrixModel,
@@ -99,6 +100,7 @@ export const settingsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      await assertPlatformPermission("settings.access");
       const matrix = await getOrCreateMatrix();
       matrix[input.role][input.permissionKey] = input.allowed;
 

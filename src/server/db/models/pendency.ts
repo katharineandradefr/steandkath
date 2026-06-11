@@ -54,6 +54,7 @@ const pendencySchema = new Schema(
     title: { type: String, required: true, maxlength: 500 },
     description: { type: String, default: null },
     descriptionMarkdown: { type: String, default: "" },
+    solutionMarkdown: { type: String, default: "" },
     projectKey: {
       type: String,
       required: true,

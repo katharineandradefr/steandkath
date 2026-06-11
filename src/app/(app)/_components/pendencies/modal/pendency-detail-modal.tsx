@@ -179,13 +179,35 @@ export function PendencyDetailModal({
               <h3 className="text-sm font-semibold text-white">Descrição</h3>
             </div>
             <DescriptionRichEditor
-              key={draft.id}
+              key={`${draft.id}-description`}
               initialValue={draft.descriptionMarkdown}
               theme="dark"
               placeholder="Detalhe a tarefa…"
               onChange={(descriptionMarkdown) => patch({ descriptionMarkdown })}
             />
           </section>
+
+          <section className="border-t border-sidebar-border pt-5">
+            <div className="mb-3 flex items-center gap-2">
+              <LinesIcon />
+              <h3 className="text-sm font-semibold text-white">Solução</h3>
+            </div>
+            {readOnly ? (
+              <p className="min-h-[4rem] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 whitespace-pre-wrap">
+                {stripHtmlToPlainText(draft.solutionMarkdown) ||
+                  "Nenhuma solução registrada."}
+              </p>
+            ) : (
+              <DescriptionRichEditor
+                key={`${draft.id}-solution`}
+                initialValue={draft.solutionMarkdown}
+                theme="dark"
+                placeholder="Descreva como a pendência foi ou será resolvida…"
+                onChange={(solutionMarkdown) => patch({ solutionMarkdown })}
+              />
+            )}
+          </section>
+
           <ModalAttachments
             attachments={draft.attachments}
             onChange={(attachments) => patch({ attachments })}

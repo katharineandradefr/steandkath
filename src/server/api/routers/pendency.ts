@@ -26,7 +26,8 @@ import {
   type PendencyStatus,
   type PendencyUrgency,
 } from "~/shared/pendency";
-import { getVisiblePendencyStatuses } from "~/shared/permissions";
+import { getPendencyListStatuses } from "~/shared/permissions";
+import { isCoordinationRole } from "~/shared/user";
 
 const projectKeySchema = z.enum(
   PENDENCY_PROJECT_KEYS as unknown as [PendencyProjectKey, ...PendencyProjectKey[]],
@@ -92,6 +93,7 @@ const pendencyWriteFieldsSchema = z.object({
   areaKey: z.string().min(1).default(DEFAULT_AREA_KEY),
   title: z.string().trim().min(1).max(500),
   descriptionMarkdown: z.string().max(50_000).default(""),
+  solutionMarkdown: z.string().max(50_000).default(""),
   projectKey: projectKeySchema,
   urgency: urgencySchema,
   links: z.array(linkSchema).max(20).default([]),
@@ -137,7 +139,7 @@ export const pendencyRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const { role } = await getCurrentUserPermissionContext();
-      const visibleStatuses = getVisiblePendencyStatuses(role);
+      const visibleStatuses = getPendencyListStatuses(role);
       const filter: Record<string, unknown> = {
         status: { $in: visibleStatuses },
       };
@@ -189,6 +191,7 @@ export const pendencyRouter = createTRPCRouter({
         title: input.title,
         description: excerptFromMarkdown(input.descriptionMarkdown),
         descriptionMarkdown: input.descriptionMarkdown,
+        solutionMarkdown: input.solutionMarkdown ?? "",
         projectKey: input.projectKey,
         status: "pending",
         urgency: input.urgency,
@@ -250,6 +253,9 @@ export const pendencyRouter = createTRPCRouter({
       if (patch.descriptionMarkdown !== undefined) {
         existing.descriptionMarkdown = patch.descriptionMarkdown;
         existing.description = excerptFromMarkdown(patch.descriptionMarkdown);
+      }
+      if (patch.solutionMarkdown !== undefined) {
+        existing.solutionMarkdown = patch.solutionMarkdown;
       }
       if (patch.projectKey !== undefined) existing.projectKey = patch.projectKey;
       if (patch.urgency !== undefined) existing.urgency = patch.urgency;
@@ -369,5 +375,44 @@ export const pendencyRouter = createTRPCRouter({
 
       await PendencyModel.bulkWrite(bulkOps);
       return { updated: input.moves.length };
+    }),
+
+  /**
+   * Coordenador/subcoordenador assume pendência pendente → em análise ao visualizar.
+   */
+  pickup: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const { role } = await getCurrentUserPermissionContext();
+      if (!isCoordinationRole(role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas coordenadores podem assumir pendências.",
+        });
+      }
+
+      const existing = await PendencyModel.findOne({ id: input.id }).exec();
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Pendência não encontrada.",
+        });
+      }
+
+      if (existing.status !== "pending") {
+        return docToPendency(existing);
+      }
+
+      await assertCan("set_status", "in_review");
+
+      const inReviewCount = await PendencyModel.countDocuments({
+        status: "in_review",
+      }).exec();
+
+      existing.status = "in_review";
+      existing.position = inReviewCount;
+      await existing.save();
+
+      return docToPendency(existing);
     }),
 });

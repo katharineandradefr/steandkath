@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ChevronDown, Search, Users } from "lucide-react";
 
+import { formatConversationPreviewLine } from "~/app/(app)/chat/_utils/conversation-preview";
+
 import type { Conversation } from "./chat-types";
 
 type Props = {
@@ -43,21 +45,19 @@ function ConversationItem({
       <button
         type="button"
         onClick={onSelect}
-        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-black/10 ${
+        className={`grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-black/10 ${
           isActive ? "bg-black/15" : ""
         }`}
       >
         <ConversationAvatar conv={conv} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 overflow-hidden">
           <p className="truncate text-sm font-semibold text-gray-800">{conv.name}</p>
           <p className="truncate text-xs text-gray-500">
-            {conv.conversationStatus === "em-atendimento" && conv.attendantName
-              ? `${conv.attendantName} · ${conv.preview}`
-              : conv.preview}
+            {formatConversationPreviewLine(conv.preview)}
           </p>
         </div>
         {!!conv.unreadCount && (
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+          <span className="col-start-3 row-start-1 flex h-5 min-w-5 shrink-0 items-center justify-center self-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
             {conv.unreadCount}
           </span>
         )}

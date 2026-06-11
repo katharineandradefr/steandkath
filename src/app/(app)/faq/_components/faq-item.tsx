@@ -12,7 +12,7 @@ type Props = {
   entry: FaqEntry;
   isExpanded: boolean;
   onToggle: () => void;
-  onEditClick: () => void;
+  onEditClick?: () => void;
 };
 
 /**
@@ -56,17 +56,19 @@ export function FaqItem({ entry, isExpanded, onToggle, onEditClick }: Props) {
               {entry.answer}
             </p>
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditClick();
-              }}
-              className="absolute right-4 bottom-2 text-gray-400 transition-colors hover:text-[#5B0A0A]"
-              aria-label="Editar pergunta"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+            {onEditClick ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditClick();
+                }}
+                className="absolute right-4 bottom-2 text-gray-400 transition-colors hover:text-[#5B0A0A]"
+                aria-label="Editar pergunta"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

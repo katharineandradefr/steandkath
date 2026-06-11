@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import { SidebarNavItem } from "~/app/_components/sidebar/sidebar-nav-item";
 import { SIDEBAR_NAV_ITEMS } from "~/app/_components/sidebar/sidebar-nav";
 
@@ -17,8 +18,13 @@ type AppSidebarProps = {
  */
 export function AppSidebar({ expanded, onToggle, onMouseLeave }: AppSidebarProps) {
   const pathname = usePathname();
+  const { can } = usePermissions();
 
-  const visibleItems = SIDEBAR_NAV_ITEMS.filter((item) => !item.disabled);
+  const visibleItems = SIDEBAR_NAV_ITEMS.filter((item) => {
+    if (item.disabled) return false;
+    if (item.id === "configuracoes") return can("settings.access");
+    return true;
+  });
 
   const isItemActive = (href: string | undefined) => {
     if (!href) return false;

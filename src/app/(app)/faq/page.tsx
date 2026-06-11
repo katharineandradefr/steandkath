@@ -3,6 +3,8 @@
 import { useCallback, useState } from "react";
 import { Minus, Plus, Search } from "lucide-react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
+
 import { FaqItem, type FaqEntry } from "./_components/faq-item";
 import { FaqForm } from "./_components/faq-form";
 import { FaqConfirmDialog } from "./_components/faq-confirm-dialog";
@@ -33,6 +35,8 @@ const INITIAL_FAQS: FaqEntry[] = [
 ];
 
 export default function FaqPage() {
+  const { can } = usePermissions();
+  const canEditFaq = can("faq.edit");
   const [faqs, setFaqs] = useState<FaqEntry[]>(INITIAL_FAQS);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -134,7 +138,9 @@ export default function FaqPage() {
                 entry={entry}
                 isExpanded={expandedId === entry.id}
                 onToggle={() => handleToggle(entry.id)}
-                onEditClick={() => handleEditClick(entry.id)}
+                onEditClick={
+                  canEditFaq ? () => handleEditClick(entry.id) : undefined
+                }
               />
             ))}
 
@@ -148,27 +154,31 @@ export default function FaqPage() {
         </div>
       </div>
 
-      {/* Rodapé — botões abaixo do card, alinhados à direita */}
-      <div className="flex shrink-0 items-center justify-end gap-2 px-1 pb-1">
-        <button
-          type="button"
-          onClick={() => expandedId && setShowDeleteConfirm(true)}
-          disabled={!expandedId}
-          className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white disabled:opacity-30"
-          aria-label="Remover pergunta selecionada"
-        >
-          <Minus className="h-4 w-4" />
-        </button>
+      {canEditFaq ? (
+        <div className="flex shrink-0 items-center justify-end gap-2 px-1 pb-1">
+          <button
+            type="button"
+            onClick={() => expandedId && setShowDeleteConfirm(true)}
+            disabled={!expandedId}
+            className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white disabled:opacity-30"
+            aria-label="Remover pergunta selecionada"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => { setMode("add"); setExpandedId(null); }}
-          className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white"
-          aria-label="Adicionar nova pergunta"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("add");
+              setExpandedId(null);
+            }}
+            className="faq-footer-btn flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm transition-colors hover:bg-white"
+            aria-label="Adicionar nova pergunta"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
 
       {/* Modal: adicionar */}
       {mode === "add" && (

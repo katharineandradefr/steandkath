@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import { z } from "zod";
 
 import { env } from "~/env";
+import { assertPlatformPermission } from "~/server/auth/platform-permissions";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { connectToDatabase } from "~/server/db/connection";
 import { DrCofKnowledgeModel } from "~/server/db/models/dr-cof-knowledge";
@@ -89,6 +90,7 @@ export const drCofRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      await assertPlatformPermission("ai.teach");
       await connectToDatabase();
       const doc = await DrCofKnowledgeModel.create(input);
       return { id: doc._id.toString() };
@@ -112,6 +114,7 @@ export const drCofRouter = createTRPCRouter({
   deleteKnowledge: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
+      await assertPlatformPermission("ai.teach");
       await connectToDatabase();
       await DrCofKnowledgeModel.findByIdAndDelete(input.id);
       return { ok: true };

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import { CoursesPanel } from "~/app/(app)/configuracoes/_components/courses-panel";
 import { GeneralSettingsPanel } from "~/app/(app)/configuracoes/_components/general-settings-panel";
 import { PermissionsPanel } from "~/app/(app)/configuracoes/_components/permissions-panel";
@@ -21,6 +22,8 @@ const TABS: { id: SettingsTab; label: string }[] = [
  * Tela de configurações com abas para permissões, usuários e cursos.
  */
 export function SettingsPage() {
+  const { can, isLoading: permissionsLoading } = usePermissions();
+  const canAccessSettings = can("settings.access");
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   const permissionsQuery = api.settings.getPermissions.useQuery(undefined, {
@@ -46,6 +49,25 @@ export function SettingsPage() {
         : activeTab === "courses"
           ? coursesQuery.error?.message
           : null;
+
+  if (permissionsLoading) {
+    return (
+      <div className="flex min-h-[24rem] items-center justify-center rounded-3xl bg-gray-100 p-8">
+        <p className="text-sm text-calendar-muted">Carregando…</p>
+      </div>
+    );
+  }
+
+  if (!canAccessSettings) {
+    return (
+      <div className="flex min-h-[24rem] items-center justify-center rounded-3xl bg-gray-100 p-8">
+        <p className="max-w-md text-center text-sm text-calendar-muted" role="alert">
+          Você não tem permissão para acessar as configurações. Somente Designer 1
+          pode usar esta área.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-calendar-bordeaux p-3 sm:p-4">

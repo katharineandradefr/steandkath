@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Minus, Pencil, Plus } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Minus,
+  Pencil,
+  Plus,
+} from "lucide-react";
 
 import { usePermissions } from "~/app/_components/active-user-provider";
 import { GoalCard } from "~/app/(app)/calendario/_components/goal-card";
@@ -30,6 +38,7 @@ type CalendarSidePanelProps = {
   onEditGoal: (goal: Goal) => void;
   onCompleteGoal: (goal: Goal) => void;
   onDeleteGoal: (goal: Goal) => void;
+  onViewGoal: (goal: Goal) => void;
 };
 
 type ViewMode = "project" | "day";
@@ -72,6 +81,7 @@ export function CalendarSidePanel({
   onEditGoal,
   onCompleteGoal,
   onDeleteGoal,
+  onViewGoal,
 }: CalendarSidePanelProps) {
   const { data: weekGoals = [], isLoading: weekLoading } =
     api.goal.listByWeek.useQuery({ referenceDate: weekReferenceDate });
@@ -86,8 +96,10 @@ export function CalendarSidePanel({
 
   const canCreateGoal = can("goal.create");
   const canEditGoal = can("goal.edit");
+  const canViewGoal = can("goal.view");
   const canCompleteGoal = can("goal.complete");
   const canDeleteGoal = can("goal.delete");
+  const canCreatePendency = can("pendency.create");
 
   const dayGoals = useMemo(() => {
     if (!selectedDay) return [];
@@ -130,6 +142,9 @@ export function CalendarSidePanel({
   const showPencil =
     (selectedGoal !== null && canEditGoal) ||
     (selectedGoal === null && canCreateGoal);
+  const showViewGoal =
+    selectedGoal !== null && canViewGoal && !canEditGoal;
+  const showCreateMenu = canCreateGoal || canCreatePendency;
 
   const handleSelectProject = (key: PendencyProjectKey) => {
     setViewMode("project");
@@ -251,49 +266,65 @@ export function CalendarSidePanel({
         </div>
 
         <div className="mt-3 flex items-center gap-3 border-t border-white/20 pt-3">
-          <div ref={createMenuRef} className="relative">
+          {showCreateMenu ? (
+            <div ref={createMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCreateMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={createMenuOpen}
+                aria-label="Adicionar"
+                className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <Plus className="h-5 w-5" aria-hidden />
+              </button>
+              {createMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute bottom-full left-0 mb-2 min-w-[140px] overflow-hidden rounded-lg border border-white/15 bg-white text-sm text-gray-900 shadow-lg"
+                >
+                  {canCreateGoal ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCreateMenuOpen(false);
+                        onCreateGoal();
+                      }}
+                      className="block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                    >
+                      Meta
+                    </button>
+                  ) : null}
+                  {canCreatePendency ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCreateMenuOpen(false);
+                        onOpenCreatePendency();
+                      }}
+                      className={`block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
+                        canCreateGoal ? "border-t border-gray-100" : ""
+                      }`}
+                    >
+                      Pendência
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ) : null}
+          {showViewGoal ? (
             <button
               type="button"
-              onClick={() => setCreateMenuOpen((o) => !o)}
-              aria-haspopup="menu"
-              aria-expanded={createMenuOpen}
-              aria-label="Adicionar"
+              onClick={() => selectedGoal && onViewGoal(selectedGoal)}
               className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              aria-label="Ver detalhes da meta"
             >
-              <Plus className="h-5 w-5" aria-hidden />
+              <Eye className="h-5 w-5" aria-hidden />
             </button>
-            {createMenuOpen && (
-              <div
-                role="menu"
-                className="absolute bottom-full left-0 mb-2 min-w-[140px] overflow-hidden rounded-lg border border-white/15 bg-white text-sm text-gray-900 shadow-lg"
-              >
-                {canCreateGoal && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setCreateMenuOpen(false);
-                      onCreateGoal();
-                    }}
-                    className="block w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                  >
-                    Meta
-                  </button>
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setCreateMenuOpen(false);
-                    onOpenCreatePendency();
-                  }}
-                  className="block w-full border-t border-gray-100 px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                >
-                  Pendência
-                </button>
-              </div>
-            )}
-          </div>
+          ) : null}
           {canCompleteGoal && (
             <button
               type="button"

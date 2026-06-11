@@ -27,6 +27,7 @@ export function CalendarDashboard({
   const [isPendencyModalOpen, setIsPendencyModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [goalReadOnly, setGoalReadOnly] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [goalInitialStartDate, setGoalInitialStartDate] = useState<Date | null>(
@@ -72,6 +73,7 @@ export function CalendarDashboard({
   const handleCreateGoal = () => {
     setModalMode("create");
     setEditingGoal(null);
+    setGoalReadOnly(false);
     setGoalInitialStartDate(null);
     setModalOpen(true);
   };
@@ -88,6 +90,7 @@ export function CalendarDashboard({
       if (date.getTime() >= todayUtc) {
         setModalMode("create");
         setEditingGoal(null);
+        setGoalReadOnly(false);
         setGoalInitialStartDate(date);
         setModalOpen(true);
       }
@@ -98,6 +101,15 @@ export function CalendarDashboard({
   const handleEditGoal = (goal: Goal) => {
     setModalMode("edit");
     setEditingGoal(goal);
+    setGoalReadOnly(false);
+    setGoalInitialStartDate(null);
+    setModalOpen(true);
+  };
+
+  const handleViewGoal = (goal: Goal) => {
+    setModalMode("edit");
+    setEditingGoal(goal);
+    setGoalReadOnly(true);
     setGoalInitialStartDate(null);
     setModalOpen(true);
   };
@@ -147,6 +159,7 @@ export function CalendarDashboard({
                 onEditGoal={handleEditGoal}
                 onCompleteGoal={handleCompleteGoal}
                 onDeleteGoal={handleDeleteGoal}
+                onViewGoal={handleViewGoal}
               />
             </div>
           </div>
@@ -162,6 +175,7 @@ export function CalendarDashboard({
         open={modalOpen}
         mode={modalMode}
         goal={editingGoal}
+        readOnly={goalReadOnly}
         initialStartDate={goalInitialStartDate}
         onClose={() => setModalOpen(false)}
         onSuccess={() => setSelectedGoalId(null)}

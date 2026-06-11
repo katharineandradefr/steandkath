@@ -1,4 +1,5 @@
 import { CONVERSATIONS } from "~/app/(app)/chat/_components/chat-data";
+import { buildConversationPreviewMessage } from "~/app/(app)/chat/_utils/conversation-preview";
 import type {
   ChatHistoryEntry,
   Conversation,
@@ -131,8 +132,8 @@ export function sendPendencyChatMessage(
   ];
 
   const preview = trimmedTitle
-    ? trimmedTitle.slice(0, 80)
-    : trimmedMessage.slice(0, 80);
+    ? buildConversationPreviewMessage(trimmedTitle)
+    : buildConversationPreviewMessage(trimmedMessage);
   const updatedConversations = conversations.map((conversation) =>
     conversation.id === input.conversationId
       ? {

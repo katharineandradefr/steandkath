@@ -61,13 +61,14 @@ const userUpsertSchema = z.object({
 });
 
 /**
- * Garante o usuário de exemplo no banco com senha padrão de demonstração.
+ * Garante o usuário de exemplo no banco na primeira carga (não sobrescreve o perfil salvo).
  */
 async function ensureExampleUser(): Promise<void> {
   await UserModel.findOneAndUpdate(
     { email: EXAMPLE_USER.email },
     {
-      $set: {
+      $setOnInsert: {
+        id: EXAMPLE_USER.id,
         name: EXAMPLE_USER.name,
         email: EXAMPLE_USER.email,
         phone: EXAMPLE_USER.phone,
@@ -75,9 +76,6 @@ async function ensureExampleUser(): Promise<void> {
         role: EXAMPLE_USER.role,
         projects: EXAMPLE_USER.projects,
         area: EXAMPLE_USER.area,
-      },
-      $setOnInsert: {
-        id: EXAMPLE_USER.id,
       },
     },
     { upsert: true, runValidators: true, setDefaultsOnInsert: true },

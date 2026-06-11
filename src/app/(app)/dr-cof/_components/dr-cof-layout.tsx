@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { usePermissions } from "~/app/_components/active-user-provider";
 import { api } from "~/trpc/react";
 import type { DrCofMessage } from "./dr-cof-messages";
 import type { ChatSession } from "./history-panel";
@@ -31,7 +32,9 @@ export function DrCofLayout() {
   const [messagesBySession, setMessagesBySession] = useState<Record<string, DrCofMessage[]>>({});
   const [isReplying, setIsReplying] = useState(false);
 
+  const { can } = usePermissions();
   const askMutation = api.drCof.ask.useMutation();
+  const canTeach = can("ai.teach");
 
   const activeMessages: DrCofMessage[] = messagesBySession[activeSessionId] ?? [];
 
@@ -105,7 +108,11 @@ export function DrCofLayout() {
         {/* Chat */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <DrCofMessages messages={activeMessages} isReplying={isReplying} />
-          <DrCofInput onSend={handleSend} onTeach={() => setTeachOpen(true)} />
+          <DrCofInput
+            onSend={handleSend}
+            onTeach={() => setTeachOpen(true)}
+            canTeach={canTeach}
+          />
         </div>
 
         {/* Painel histórico */}
@@ -119,7 +126,9 @@ export function DrCofLayout() {
       </div>
 
       {/* Modal Ensinar */}
-      {teachOpen && <TeachModal onClose={() => setTeachOpen(false)} />}
+      {teachOpen && canTeach ? (
+        <TeachModal onClose={() => setTeachOpen(false)} />
+      ) : null}
     </div>
   );
 }
