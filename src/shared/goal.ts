@@ -14,6 +14,12 @@ export type GoalStatus =
   | "postponed"
   | "cancelled";
 
+export type GoalChecklistItem = {
+  id: string;
+  text: string;
+  checked: boolean;
+};
+
 export type Goal = {
   id: string;
   areaKey: string;
@@ -22,10 +28,15 @@ export type Goal = {
   status: GoalStatus;
   startDate: string;
   dueDate: string;
+  assigneeId?: string | null;
   assigneeName?: string | null;
   assigneeAvatarUrl?: string | null;
+  checklist: GoalChecklistItem[];
+  /** @deprecated Preferir checklist; mantido para metas antigas. */
   targetCount?: number | null;
+  /** @deprecated Preferir checklist; mantido para metas antigas. */
   doneCount?: number;
+  /** @deprecated Removido da UI; mantido para metas antigas. */
   progressUnit?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -169,8 +180,10 @@ export function createEmptyGoalDraft(
     status: "pending",
     startDate: today,
     dueDate: today,
+    assigneeId: null,
     assigneeName: null,
     assigneeAvatarUrl: null,
+    checklist: [],
     targetCount: null,
     doneCount: 0,
     progressUnit: null,
@@ -179,12 +192,21 @@ export function createEmptyGoalDraft(
 }
 
 /**
- * Calcula progresso quantitativo da meta (total-alvo vs concluídas).
+ * Calcula progresso da meta a partir do checklist ou campos legados.
  */
 export function getGoalProgress(goal: {
+  checklist?: GoalChecklistItem[];
   targetCount?: number | null;
   doneCount?: number;
 }): GoalProgress {
+  const checklist = goal.checklist ?? [];
+  if (checklist.length > 0) {
+    const total = checklist.length;
+    const done = checklist.filter((item) => item.checked).length;
+    const percent = Math.min(100, Math.round((done / total) * 100));
+    return { hasProgress: true, done, total, percent };
+  }
+
   const total = goal.targetCount ?? null;
   if (total === null || total <= 0) {
     return { hasProgress: false, done: 0, total: 0, percent: 0 };

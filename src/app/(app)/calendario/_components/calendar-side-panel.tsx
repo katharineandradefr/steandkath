@@ -96,6 +96,12 @@ export function CalendarSidePanel({
   const canCompleteGoal = can("goal.complete");
   const canDeleteGoal = can("goal.delete");
 
+  /** Calendário: + abre meta direto; pendência foi removida desta tela. */
+  function handleAddGoalClick() {
+    if (!canCreateGoal) return;
+    onCreateGoal();
+  }
+
   const dayGoals = useMemo(() => {
     if (!selectedDay) return [];
     return goalsOverlappingRange(monthGoals, selectedDay, selectedDay);
@@ -119,8 +125,7 @@ export function CalendarSidePanel({
   const showPencil =
     (selectedGoal !== null && canEditGoal) ||
     (selectedGoal === null && canCreateGoal);
-  const showViewGoal =
-    selectedGoal !== null && canViewGoal && !canEditGoal;
+  const showViewGoal = selectedGoal !== null && canViewGoal;
 
   const handleSelectProject = (key: PendencyProjectKey) => {
     setViewMode("project");
@@ -156,6 +161,7 @@ export function CalendarSidePanel({
                     goal={goal}
                     selected={selectedGoalId === goal.id}
                     onSelect={() => onSelectGoal(goal.id)}
+                    onOpenView={() => onViewGoal(goal)}
                   />
                 </li>
               ))}
@@ -236,22 +242,22 @@ export function CalendarSidePanel({
                 goal={goal}
                 selected={selectedGoalId === goal.id}
                 onSelect={() => onSelectGoal(goal.id)}
+                onOpenView={() => onViewGoal(goal)}
               />
             ))
           )}
         </div>
 
         <div className="mt-3 flex items-center gap-3 border-t border-white/20 pt-3">
-          {canCreateGoal ? (
-            <button
-              type="button"
-              onClick={onCreateGoal}
-              aria-label="Adicionar meta"
-              className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              <Plus className="h-5 w-5" aria-hidden />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={handleAddGoalClick}
+            aria-label="Adicionar meta"
+            className="rounded-md p-1.5 text-white transition-colors duration-150 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canCreateGoal}
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+          </button>
           {showViewGoal ? (
             <button
               type="button"

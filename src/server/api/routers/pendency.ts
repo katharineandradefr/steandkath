@@ -255,37 +255,55 @@ export const pendencyRouter = createTRPCRouter({
         await deleteRemovedAttachments(previousAttachments, nextAttachments);
       }
 
-      if (patch.title !== undefined) existing.title = patch.title;
-      if (patch.areaKey !== undefined) existing.areaKey = patch.areaKey;
+      const $set: Record<string, unknown> = {};
+      if (patch.title !== undefined) $set.title = patch.title;
+      if (patch.areaKey !== undefined) $set.areaKey = patch.areaKey;
       if (patch.descriptionMarkdown !== undefined) {
-        existing.descriptionMarkdown = patch.descriptionMarkdown;
-        existing.description = excerptFromMarkdown(patch.descriptionMarkdown);
+        $set.descriptionMarkdown = patch.descriptionMarkdown;
+        $set.description = excerptFromMarkdown(patch.descriptionMarkdown);
       }
       if (patch.solutionMarkdown !== undefined) {
-        existing.solutionMarkdown = patch.solutionMarkdown;
+        $set.solutionMarkdown = patch.solutionMarkdown;
       }
-      if (patch.projectKey !== undefined) existing.projectKey = patch.projectKey;
-      if (patch.urgency !== undefined) existing.urgency = patch.urgency;
-      if (patch.links !== undefined) existing.set("links", patch.links);
-      if (patch.checklist !== undefined) existing.set("checklist", patch.checklist);
-      if (patch.attachments !== undefined) existing.set("attachments", nextAttachments);
-      if (patch.audience !== undefined) existing.audience = patch.audience;
+      if (patch.projectKey !== undefined) $set.projectKey = patch.projectKey;
+      if (patch.urgency !== undefined) $set.urgency = patch.urgency;
+      if (patch.links !== undefined) $set.links = patch.links;
+      if (patch.checklist !== undefined) $set.checklist = patch.checklist;
+      if (patch.attachments !== undefined) $set.attachments = nextAttachments;
+      if (patch.audience !== undefined) $set.audience = patch.audience;
       if (patch.professorResponsible !== undefined) {
-        existing.professorResponsible = patch.professorResponsible;
+        $set.professorResponsible = patch.professorResponsible;
       }
       if (patch.directResponsibleId !== undefined) {
-        existing.directResponsibleId = patch.directResponsibleId;
+        $set.directResponsibleId = patch.directResponsibleId;
       }
       if (patch.solverId !== undefined) {
-        existing.solverId = patch.solverId;
+        $set.solverId = patch.solverId;
       }
       if (patch.dueDate !== undefined) {
-        existing.dueDate = patch.dueDate ? normalizeDueDate(patch.dueDate) : null;
+        $set.dueDate = patch.dueDate ? normalizeDueDate(patch.dueDate) : null;
       }
-      if (patch.recurrence !== undefined) existing.recurrence = patch.recurrence;
+      if (patch.recurrence !== undefined) $set.recurrence = patch.recurrence;
 
-      await existing.save();
-      return docToPendency(existing);
+      if (Object.keys($set).length > 0) {
+        $set.updatedAt = new Date();
+        const result = await PendencyModel.collection.updateOne(
+          { id: input.id },
+          { $set },
+        );
+        if (result.matchedCount === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pendência não encontrada.",
+          });
+        }
+      }
+
+      const updated = await PendencyModel.findOne({ id: input.id }).exec();
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pendência não encontrada." });
+      }
+      return docToPendency(updated);
     }),
 
   delete: publicProcedure

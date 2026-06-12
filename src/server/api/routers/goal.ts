@@ -4,12 +4,15 @@ import { z } from "zod";
 import { resolveGoalPermission } from "~/server/auth/goal-permissions";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { GoalModel, type GoalDoc } from "~/server/db/models/goal";
+import { UserModel } from "~/server/db/models/user";
 import {
   GOAL_STATUSES,
   toGoalDateIso,
   type Goal,
+  type GoalChecklistItem,
   type GoalStatus,
 } from "~/shared/goal";
+import { getChatContactById } from "~/shared/chat-contacts";
 import {
   DEFAULT_AREA_KEY,
   PENDENCY_PROJECT_KEYS,
@@ -27,6 +30,29 @@ const statusSchema = z.enum(
   GOAL_STATUSES as unknown as [GoalStatus, ...GoalStatus[]],
 );
 
+const checklistItemSchema = z.object({
+  id: z.string().min(1).max(64),
+  text: z.string().min(1).max(500),
+  checked: z.boolean(),
+});
+
+type MongoChecklistItem = {
+  itemId: string;
+  text: string;
+  checked: boolean;
+};
+
+/**
+ * Converte checklist do domínio para formato persistido no MongoDB.
+ */
+function toMongoChecklist(items: GoalChecklistItem[]): MongoChecklistItem[] {
+  return items.map((item) => ({
+    itemId: item.id,
+    text: item.text,
+    checked: Boolean(item.checked),
+  }));
+}
+
 const goalBaseFieldsSchema = z.object({
   areaKey: z.string().min(1).default(DEFAULT_AREA_KEY),
   title: z.string().trim().min(1).max(500),
@@ -34,8 +60,10 @@ const goalBaseFieldsSchema = z.object({
   status: statusSchema.default("pending"),
   startDate: z.coerce.date(),
   dueDate: z.coerce.date(),
+  assigneeId: z.string().max(50).nullable().optional(),
   assigneeName: z.string().max(200).nullable().optional(),
-  assigneeAvatarUrl: z.string().url().nullable().optional(),
+  assigneeAvatarUrl: z.string().nullable().optional(),
+  checklist: z.array(checklistItemSchema).max(50).default([]),
   targetCount: z.number().int().min(1).nullable().optional(),
   doneCount: z.number().int().min(0).optional(),
   progressUnit: z.string().trim().max(40).nullable().optional(),
@@ -55,6 +83,62 @@ const goalPatchSchema = goalBaseFieldsSchema.partial();
  * Converte documento Mongoose em tipo Goal compartilhado.
  */
 function docToGoal(doc: GoalDoc): Goal {
+  return leanDocToGoal(doc as unknown as LeanGoalDoc);
+}
+
+/**
+ * Extrai checklist de documento MongoDB (suporta itemId atual e id legado).
+ */
+function normalizeChecklistFromDoc(raw: unknown): GoalChecklistItem[] {
+  if (!raw || !Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry): GoalChecklistItem | null => {
+      if (!entry || typeof entry !== "object") return null;
+
+      const plain =
+        "toObject" in entry &&
+        typeof (entry as { toObject?: () => unknown }).toObject === "function"
+          ? (entry as { toObject: () => Record<string, unknown> }).toObject()
+          : (entry as Record<string, unknown>);
+
+      const id = plain.itemId ?? plain.id;
+      const text = plain.text;
+      if (typeof id !== "string" || id.length === 0) return null;
+      if (typeof text !== "string" || text.trim().length === 0) return null;
+
+      return {
+        id,
+        text: text.trim(),
+        checked: Boolean(plain.checked),
+      };
+    })
+    .filter((item): item is GoalChecklistItem => item !== null);
+}
+
+type LeanGoalDoc = {
+  id: string;
+  areaKey: string;
+  title: string;
+  projectKey: Goal["projectKey"];
+  status: GoalStatus;
+  startDate: Date;
+  dueDate: Date;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  assigneeAvatarUrl?: string | null;
+  checklist?: unknown;
+  targetCount?: number | null;
+  doneCount?: number;
+  progressUnit?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * Converte documento lean em tipo Goal compartilhado.
+ */
+function leanDocToGoal(doc: LeanGoalDoc): Goal {
   return {
     id: doc.id,
     areaKey: doc.areaKey,
@@ -63,13 +147,143 @@ function docToGoal(doc: GoalDoc): Goal {
     status: doc.status,
     startDate: toGoalDateIso(doc.startDate),
     dueDate: toGoalDateIso(doc.dueDate),
+    assigneeId: doc.assigneeId ?? null,
     assigneeName: doc.assigneeName ?? null,
     assigneeAvatarUrl: doc.assigneeAvatarUrl ?? null,
+    checklist: normalizeChecklistFromDoc(doc.checklist),
     targetCount: doc.targetCount ?? null,
     doneCount: doc.doneCount ?? 0,
     progressUnit: doc.progressUnit ?? null,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Carrega meta do banco (lean) e converte para tipo compartilhado.
+ */
+async function loadGoalById(id: string): Promise<Goal> {
+  const doc = await GoalModel.findOne({ id }).lean<LeanGoalDoc>().exec();
+  if (!doc) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
+  }
+
+  return leanDocToGoal(doc);
+}
+
+/**
+ * Migra checklist legado (campo `id`) para `itemId` no MongoDB.
+ */
+async function migrateLegacyChecklist(id: string): Promise<void> {
+  const raw = await GoalModel.collection.findOne(
+    { id },
+    { projection: { checklist: 1 } },
+  );
+  if (!raw?.checklist || !Array.isArray(raw.checklist)) return;
+
+  const needsMigration = raw.checklist.some(
+    (item: Record<string, unknown>) =>
+      typeof item.id === "string" && typeof item.itemId !== "string",
+  );
+  if (!needsMigration) return;
+
+  const migrated = raw.checklist.map((item: Record<string, unknown>) => {
+    const rawId = item.itemId ?? item.id;
+    const rawText = item.text;
+    return {
+      itemId: typeof rawId === "string" ? rawId : "",
+      text: typeof rawText === "string" ? rawText : "",
+      checked: Boolean(item.checked),
+    };
+  });
+
+  await GoalModel.collection.updateOne({ id }, { $set: { checklist: migrated } });
+}
+
+/**
+ * Remove contadores legados quando não há itens no checklist.
+ */
+async function repairOrphanProgress(id: string): Promise<void> {
+  const doc = await GoalModel.findOne({ id })
+    .select({ checklist: 1, targetCount: 1 })
+    .lean<{ checklist?: unknown; targetCount?: number | null }>()
+    .exec();
+  if (!doc) return;
+
+  const checklist = normalizeChecklistFromDoc(doc.checklist);
+  if (checklist.length === 0 && doc.targetCount != null) {
+    await GoalModel.collection.updateOne(
+      { id },
+      { $set: { targetCount: null, doneCount: 0, progressUnit: null } },
+    );
+  }
+}
+
+/**
+ * Resolve responsável a partir do contato do chat ou usuário da plataforma.
+ */
+async function resolveAssignee(assigneeId: string | null | undefined): Promise<{
+  assigneeId: string | null;
+  assigneeName: string | null;
+  assigneeAvatarUrl: string | null;
+}> {
+  if (!assigneeId) {
+    return { assigneeId: null, assigneeName: null, assigneeAvatarUrl: null };
+  }
+
+  const contact = getChatContactById(assigneeId);
+  if (contact) {
+    return {
+      assigneeId,
+      assigneeName: contact.name,
+      assigneeAvatarUrl: null,
+    };
+  }
+
+  const user = await UserModel.findOne({ id: assigneeId }).lean().exec();
+  if (!user) {
+    return { assigneeId: null, assigneeName: null, assigneeAvatarUrl: null };
+  }
+
+  const assigneeAvatarUrl = user.photoBase64?.startsWith("data:")
+    ? user.photoBase64
+    : null;
+
+  return {
+    assigneeId,
+    assigneeName: user.name,
+    assigneeAvatarUrl,
+  };
+}
+
+/**
+ * Sincroniza contadores legados e status a partir do checklist.
+ */
+function applyChecklistRules(
+  checklist: GoalChecklistItem[],
+  status: GoalStatus,
+): {
+  checklist: GoalChecklistItem[];
+  targetCount: number | null;
+  doneCount: number;
+  status: GoalStatus;
+} {
+  if (checklist.length === 0) {
+    return { checklist, targetCount: null, doneCount: 0, status };
+  }
+
+  const doneCount = checklist.filter((item) => item.checked).length;
+  const targetCount = checklist.length;
+  const nextStatus =
+    doneCount >= targetCount && status !== "cancelled"
+      ? "completed"
+      : status;
+
+  return {
+    checklist,
+    targetCount,
+    doneCount,
+    status: nextStatus,
   };
 }
 
@@ -136,6 +350,50 @@ async function assertCan(
   }
 }
 
+/**
+ * Monta campos de checklist/contadores a partir dos itens e status.
+ */
+function buildChecklistFields(
+  checklist: GoalChecklistItem[],
+  status: GoalStatus,
+) {
+  const progress = applyChecklistRules(checklist, status);
+  return {
+    checklist: toMongoChecklist(progress.checklist),
+    targetCount: progress.targetCount,
+    doneCount: progress.doneCount,
+    status: progress.status,
+    progressUnit: null,
+  };
+}
+
+/**
+ * Persiste checklist via $set atômico (evita perda do array no Mongoose save).
+ */
+async function persistGoalChecklist(
+  id: string,
+  checklist: GoalChecklistItem[],
+  status: GoalStatus,
+): Promise<Goal> {
+  const fields = buildChecklistFields(checklist, status);
+  const result = await GoalModel.collection.updateOne(
+    { id },
+    {
+      $set: {
+        checklist: fields.checklist,
+        targetCount: fields.targetCount,
+        doneCount: fields.doneCount,
+        status: fields.status,
+        progressUnit: fields.progressUnit,
+      },
+    },
+  );
+  if (result.matchedCount === 0) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
+  }
+  return loadGoalById(id);
+}
+
 export const goalRouter = createTRPCRouter({
   listByMonth: publicProcedure
     .input(
@@ -158,8 +416,18 @@ export const goalRouter = createTRPCRouter({
 
       const docs = await GoalModel.find(filter)
         .sort({ startDate: 1, dueDate: 1 })
+        .lean<LeanGoalDoc[]>()
         .exec();
-      return docs.map(docToGoal);
+      return docs.map(leanDocToGoal);
+    }),
+
+  getById: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input }) => {
+      await assertCan("view");
+      await migrateLegacyChecklist(input.id);
+      await repairOrphanProgress(input.id);
+      return loadGoalById(input.id);
     }),
 
   listByWeek: publicProcedure
@@ -180,36 +448,60 @@ export const goalRouter = createTRPCRouter({
 
       const docs = await GoalModel.find(filter)
         .sort({ dueDate: 1 })
+        .lean<LeanGoalDoc[]>()
         .exec();
-      return docs.map(docToGoal);
+      return docs.map(leanDocToGoal);
     }),
 
   create: publicProcedure
     .input(goalWriteFieldsSchema)
     .mutation(async ({ input }) => {
       await assertCan("create");
-      const targetCount = input.targetCount ?? null;
-      const progress = applyProgressRules(
-        targetCount,
-        input.doneCount,
+      const assignee = await resolveAssignee(input.assigneeId);
+      const checklistFields = buildChecklistFields(
+        input.checklist ?? [],
         input.status,
       );
-      const doc = await GoalModel.create({
-        id: crypto.randomUUID(),
+
+      let targetCount = input.targetCount ?? null;
+      let doneCount = input.doneCount ?? 0;
+      let status = input.status;
+
+      if ((input.checklist ?? []).length > 0) {
+        targetCount = checklistFields.targetCount;
+        doneCount = checklistFields.doneCount;
+        status = checklistFields.status;
+      } else {
+        const progress = applyProgressRules(targetCount, doneCount, status);
+        doneCount = progress.doneCount;
+        status = progress.status;
+        targetCount = null;
+      }
+
+      const id = crypto.randomUUID();
+      const now = new Date();
+
+      await GoalModel.collection.insertOne({
+        id,
         areaKey: input.areaKey,
         title: input.title,
         projectKey: input.projectKey,
-        status: progress.status,
+        status,
         startDate: normalizeDate(input.startDate),
         dueDate: normalizeDate(input.dueDate),
-        assigneeName: input.assigneeName ?? null,
-        assigneeAvatarUrl: input.assigneeAvatarUrl ?? null,
+        assigneeId: assignee.assigneeId,
+        assigneeName: assignee.assigneeName,
+        assigneeAvatarUrl: assignee.assigneeAvatarUrl,
+        checklist: checklistFields.checklist,
         targetCount,
-        doneCount: progress.doneCount,
-        progressUnit: targetCount ? (input.progressUnit ?? null) : null,
+        doneCount,
+        progressUnit: null,
+        createdAt: now,
+        updatedAt: now,
       });
+
       // TODO: registrar no histórico de atividades (RN-C05)
-      return docToGoal(doc);
+      return loadGoalById(id);
     }),
 
   update: publicProcedure
@@ -221,6 +513,7 @@ export const goalRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       await assertCan("update");
+      await migrateLegacyChecklist(input.id);
       const existing = await GoalModel.findOne({ id: input.id }).exec();
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
@@ -234,56 +527,67 @@ export const goalRouter = createTRPCRouter({
         await assertCan("update_status", patch.status);
       }
 
-      if (patch.title !== undefined) existing.title = patch.title;
-      if (patch.areaKey !== undefined) existing.areaKey = patch.areaKey;
-      if (patch.projectKey !== undefined) existing.projectKey = patch.projectKey;
-      if (patch.status !== undefined) existing.status = patch.status;
+      const $set: Record<string, unknown> = {};
+
+      if (patch.title !== undefined) $set.title = patch.title;
+      if (patch.areaKey !== undefined) $set.areaKey = patch.areaKey;
+      if (patch.projectKey !== undefined) $set.projectKey = patch.projectKey;
       if (patch.startDate !== undefined) {
-        existing.startDate = normalizeDate(patch.startDate);
+        $set.startDate = normalizeDate(patch.startDate);
       }
       if (patch.dueDate !== undefined) {
-        existing.dueDate = normalizeDate(patch.dueDate);
+        $set.dueDate = normalizeDate(patch.dueDate);
       }
-      if (patch.assigneeName !== undefined) {
-        existing.assigneeName = patch.assigneeName;
-      }
-      if (patch.assigneeAvatarUrl !== undefined) {
-        existing.assigneeAvatarUrl = patch.assigneeAvatarUrl;
-      }
-      if (patch.targetCount !== undefined) {
-        existing.targetCount = patch.targetCount;
-      }
-      if (patch.progressUnit !== undefined) {
-        existing.progressUnit = patch.progressUnit;
-      }
-      if (patch.doneCount !== undefined) {
-        existing.doneCount = patch.doneCount;
+      if (patch.assigneeId !== undefined) {
+        const assignee = await resolveAssignee(patch.assigneeId);
+        $set.assigneeId = assignee.assigneeId;
+        $set.assigneeName = assignee.assigneeName;
+        $set.assigneeAvatarUrl = assignee.assigneeAvatarUrl;
       }
 
-      const targetCount = existing.targetCount ?? null;
-      if (targetCount === null) {
-        existing.doneCount = 0;
-        existing.progressUnit = null;
+      const baseStatus = patch.status ?? existing.status;
+
+      if (patch.checklist !== undefined) {
+        Object.assign($set, buildChecklistFields(patch.checklist, baseStatus));
       } else {
-        const progress = applyProgressRules(
-          targetCount,
-          existing.doneCount,
-          existing.status,
-        );
-        existing.doneCount = progress.doneCount;
-        existing.status = progress.status;
+        const existingChecklist = normalizeChecklistFromDoc(existing.checklist);
+
+        if (existingChecklist.length > 0) {
+          Object.assign(
+            $set,
+            buildChecklistFields(existingChecklist, baseStatus),
+          );
+        } else {
+          $set.targetCount = null;
+          $set.doneCount = 0;
+          $set.progressUnit = null;
+          if (patch.status !== undefined) {
+            $set.status = patch.status;
+          }
+        }
       }
 
-      if (existing.dueDate < existing.startDate) {
+      const nextStart =
+        ($set.startDate as Date | undefined) ?? existing.startDate;
+      const nextDue = ($set.dueDate as Date | undefined) ?? existing.dueDate;
+      if (nextDue < nextStart) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "A data limite deve ser igual ou posterior à data de início.",
         });
       }
 
-      await existing.save();
+      const result = await GoalModel.collection.updateOne(
+        { id: input.id },
+        { $set },
+      );
+
+      if (result.matchedCount === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
+      }
+
       // TODO: registrar no histórico de atividades (RN-C05)
-      return docToGoal(existing);
+      return loadGoalById(input.id);
     }),
 
   updateStatus: publicProcedure
@@ -304,6 +608,32 @@ export const goalRouter = createTRPCRouter({
       await existing.save();
       // TODO: registrar no histórico de atividades (RN-C05)
       return docToGoal(existing);
+    }),
+
+  /** Atualiza checklist da meta — disponível a qualquer usuário com acesso de visualização. */
+  updateChecklist: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        checklist: z.array(checklistItemSchema).max(50),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertCan("view");
+      await migrateLegacyChecklist(input.id);
+      const existing = await GoalModel.findOne({ id: input.id })
+        .select({ status: 1 })
+        .lean()
+        .exec();
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Meta não encontrada." });
+      }
+
+      return persistGoalChecklist(
+        input.id,
+        input.checklist,
+        existing.status,
+      );
     }),
 
   delete: publicProcedure

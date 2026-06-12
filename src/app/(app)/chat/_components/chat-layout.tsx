@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
+  CHAT_STORAGE_UPDATED_EVENT,
   loadChatState,
   mergeChatConversations,
+  mergeMessagesByConversation,
   saveChatState,
 } from "~/app/(app)/chat/_utils/chat-storage";
 import { useUserPreferences } from "~/app/_components/user-preferences-provider";
@@ -77,22 +79,50 @@ export function ChatLayout() {
     }
   }
 
-  useEffect(() => {
+  const hydrateFromStorage = useCallback(() => {
     const loaded = loadChatState();
-    if (loaded) {
-      setMessagesByConversation(loaded.messagesByConversation);
-      setSavedMessages(loaded.savedMessages);
-      setFavoritedIds(new Set(loaded.favoritedIds));
-      setConversations(mergeChatConversations(loaded.conversations));
-      if (loaded.historyByConversation) {
-        setHistoryByConversation({
-          ...DEFAULT_HISTORY_BY_CONVERSATION,
-          ...loaded.historyByConversation,
-        });
-      }
+    if (!loaded) return;
+
+    setMessagesByConversation(
+      mergeMessagesByConversation(
+        loaded.messagesByConversation,
+        DEFAULT_MESSAGES_BY_CONVERSATION,
+      ),
+    );
+    setSavedMessages(loaded.savedMessages);
+    setFavoritedIds(new Set(loaded.favoritedIds));
+    setConversations(mergeChatConversations(loaded.conversations));
+    if (loaded.historyByConversation) {
+      setHistoryByConversation({
+        ...DEFAULT_HISTORY_BY_CONVERSATION,
+        ...loaded.historyByConversation,
+      });
     }
-    setHydrated(true);
+    if (loaded.lastUpdatedConversationId) {
+      setActiveConversationId(loaded.lastUpdatedConversationId);
+    }
   }, []);
+
+  useEffect(() => {
+    hydrateFromStorage();
+    setHydrated(true);
+  }, [hydrateFromStorage]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const syncFromStorage = () => hydrateFromStorage();
+
+    window.addEventListener(CHAT_STORAGE_UPDATED_EVENT, syncFromStorage);
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener("focus", syncFromStorage);
+
+    return () => {
+      window.removeEventListener(CHAT_STORAGE_UPDATED_EVENT, syncFromStorage);
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
+    };
+  }, [hydrated, hydrateFromStorage]);
 
   useEffect(() => {
     if (!hydrated) return;

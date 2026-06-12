@@ -10,12 +10,17 @@ import { getChatContactById } from "~/shared/chat-contacts";
 
 const STORAGE_KEY = "steandkath-chat-v1";
 
+/** Evento disparado quando o localStorage do chat é atualizado fora do ChatLayout. */
+export const CHAT_STORAGE_UPDATED_EVENT = "steandkath-chat-updated";
+
 export type ChatPersistedState = {
   messagesByConversation: Record<string, Message[]>;
   savedMessages: SavedMessage[];
   favoritedIds: string[];
   conversations?: Conversation[];
   historyByConversation?: Record<string, ChatHistoryEntry[]>;
+  /** Conversa atualizada por encaminhamento de pendência (foco ao abrir o chat). */
+  lastUpdatedConversationId?: string;
 };
 
 export type SendPendencyChatMessageInput = {
@@ -48,6 +53,24 @@ export function mergeChatConversations(
     const saved = storedById.get(defaults.id);
     return saved ? { ...defaults, ...saved } : defaults;
   });
+}
+
+/**
+ * Notifica componentes do chat que o estado persistido mudou.
+ */
+export function notifyChatStorageUpdated(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(CHAT_STORAGE_UPDATED_EVENT));
+}
+
+/**
+ * Mescla mensagens salvas com defaults de seed (conversas sem histórico persistido).
+ */
+export function mergeMessagesByConversation(
+  stored: Record<string, Message[]>,
+  defaults: Record<string, Message[]>,
+): Record<string, Message[]> {
+  return { ...defaults, ...stored };
 }
 
 /**
@@ -150,7 +173,11 @@ export function sendPendencyChatMessage(
     savedMessages: loaded?.savedMessages ?? [],
     favoritedIds: loaded?.favoritedIds ?? [],
     conversations: updatedConversations,
+    historyByConversation: loaded?.historyByConversation,
+    lastUpdatedConversationId: input.conversationId,
   });
+
+  notifyChatStorageUpdated();
 
   return { ok: true };
 }

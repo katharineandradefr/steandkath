@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 
+import { GoalChecklistField } from "~/app/(app)/calendario/_components/goal-checklist-field";
+import type { GoalChecklistFieldHandle } from "~/app/(app)/calendario/_components/goal-checklist-field";
 import { usePermissions } from "~/app/_components/active-user-provider";
 import {
   createEmptyGoalDraft,
@@ -10,6 +12,7 @@ import {
   GOAL_STATUS_LABELS,
   GOAL_STATUSES,
   type Goal,
+  type GoalChecklistItem,
   type GoalStatus,
 } from "~/shared/goal";
 import { goalActionToPermissionKey } from "~/shared/permissions";
@@ -19,6 +22,10 @@ import {
   PENDENCY_PROJECT_LABELS,
   type PendencyProjectKey,
 } from "~/shared/pendency";
+import {
+  CHAT_CONTACTS,
+  getChatContactById,
+} from "~/shared/chat-contacts";
 import { api } from "~/trpc/react";
 
 type GoalFormModalProps = {
@@ -26,7 +33,12 @@ type GoalFormModalProps = {
   mode: "create" | "edit";
   goal: Goal | null;
   readOnly?: boolean;
+  /** Visualização com checklist interativo (marcar/desmarcar itens). */
+  checklistInteractive?: boolean;
   initialStartDate?: Date | null;
+  /** Chaves das queries do calendário para atualizar cache após salvar. */
+  monthQueryKey?: { year: number; month: number };
+  weekQueryKey?: { referenceDate: Date };
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -37,11 +49,8 @@ type FormState = {
   status: GoalStatus;
   startDate: string;
   dueDate: string;
-  assigneeName: string;
-  assigneeAvatarUrl: string;
-  targetCount: string;
-  doneCount: string;
-  progressUnit: string;
+  assigneeId: string;
+  checklist: GoalChecklistItem[];
 };
 
 /**
@@ -155,7 +164,10 @@ export function GoalFormModal({
   mode,
   goal,
   readOnly = false,
+  checklistInteractive = false,
   initialStartDate = null,
+  monthQueryKey,
+  weekQueryKey,
   onClose,
   onSuccess,
 }: GoalFormModalProps) {
@@ -163,9 +175,51 @@ export function GoalFormModal({
     buildFormFromGoal(null, null),
   );
   const [error, setError] = useState<string | null>(null);
+  const checklistFieldRef = useRef<GoalChecklistFieldHandle>(null);
+  const loadedGoalIdRef = useRef<string | null>(null);
   const { can } = usePermissions();
 
   const utils = api.useUtils();
+
+  const editGoalId = mode === "edit" ? goal?.id : undefined;
+
+  const {
+    data: freshGoal,
+    isLoading: isLoadingGoal,
+    isError: isGoalLoadError,
+  } = api.goal.getById.useQuery(
+    { id: editGoalId! },
+    {
+      enabled: open && mode === "edit" && !!editGoalId,
+      staleTime: 0,
+      refetchOnMount: "always",
+    },
+  );
+
+  const syncGoalInListCache = async (saved: Goal) => {
+    const merge = (prev: Goal[] | undefined) => {
+      if (!prev) return [saved];
+      const index = prev.findIndex((item) => item.id === saved.id);
+      if (index === -1) return [...prev, saved];
+      const next = [...prev];
+      next[index] = saved;
+      return next;
+    };
+
+    utils.goal.getById.setData({ id: saved.id }, saved);
+
+    if (monthQueryKey) {
+      utils.goal.listByMonth.setData(monthQueryKey, merge);
+    }
+    if (weekQueryKey) {
+      utils.goal.listByWeek.setData(weekQueryKey, merge);
+    }
+
+    await Promise.all([
+      utils.goal.listByMonth.invalidate(),
+      utils.goal.listByWeek.invalidate(),
+    ]);
+  };
 
   const selectableStatuses = useMemo(
     () =>
@@ -178,20 +232,37 @@ export function GoalFormModal({
   );
 
   useEffect(() => {
-    if (open) {
-      setForm(
-        buildFormFromGoal(
-          goal,
-          mode === "create" ? initialStartDate : null,
-        ),
-      );
-      setError(null);
+    if (!open) {
+      loadedGoalIdRef.current = null;
+      return;
     }
-  }, [open, goal, mode, initialStartDate]);
+
+    if (mode === "create") {
+      setForm(buildFormFromGoal(null, initialStartDate));
+      setError(null);
+      return;
+    }
+
+    if (!freshGoal || freshGoal.id !== editGoalId) return;
+
+    const syncKey = `${freshGoal.id}:${freshGoal.updatedAt}:${freshGoal.checklist.length}`;
+    if (loadedGoalIdRef.current === syncKey) return;
+
+    loadedGoalIdRef.current = syncKey;
+    setForm(buildFormFromGoal(freshGoal, null));
+    setError(null);
+  }, [open, mode, editGoalId, freshGoal, initialStartDate]);
+
+  const showOrphanProgressWarning =
+    mode === "edit" &&
+    (freshGoal?.checklist.length ?? 0) === 0 &&
+    (freshGoal?.targetCount ?? 0) > 0;
+
+  const activeGoalId = freshGoal?.id ?? goal?.id;
 
   const createMutation = api.goal.create.useMutation({
-    onSuccess: async () => {
-      await utils.goal.invalidate();
+    onSuccess: async (saved) => {
+      await syncGoalInListCache(saved);
       onSuccess();
       onClose();
     },
@@ -199,41 +270,96 @@ export function GoalFormModal({
   });
 
   const updateMutation = api.goal.update.useMutation({
-    onSuccess: async () => {
-      await utils.goal.invalidate();
+    onSuccess: async (saved) => {
+      await syncGoalInListCache(saved);
       onSuccess();
       onClose();
     },
     onError: (err) => setError(err.message),
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const updateChecklistMutation = api.goal.updateChecklist.useMutation({
+    onSuccess: async (saved) => {
+      await syncGoalInListCache(saved);
+      setForm((current) => ({
+        ...current,
+        checklist: [...saved.checklist],
+        status: saved.status,
+      }));
+      loadedGoalIdRef.current = `${saved.id}:${saved.updatedAt}:${saved.checklist.length}`;
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    updateChecklistMutation.isPending;
   const fieldDisabled = readOnly || isPending;
   const modalTitle = readOnly
-    ? "Detalhes da meta"
+    ? "Visualizar meta"
     : mode === "create"
       ? "Nova meta"
       : "Editar meta";
 
+  const handleChecklistChange = (checklist: GoalChecklistItem[]) => {
+    setForm((f) => ({ ...f, checklist }));
+    if (checklistInteractive && activeGoalId) {
+      updateChecklistMutation.mutate({ id: activeGoalId, checklist });
+    }
+  };
+
   if (!open) return null;
 
-  const targetNum = form.targetCount.trim()
-    ? Number.parseInt(form.targetCount, 10)
-    : null;
-  const doneNum = form.doneCount.trim()
-    ? Number.parseInt(form.doneCount, 10)
-    : 0;
-  const progress = getGoalProgress({
-    targetCount: targetNum && !Number.isNaN(targetNum) ? targetNum : null,
-    doneCount: Number.isNaN(doneNum) ? 0 : doneNum,
-  });
+  const isEditLoading = mode === "edit" && isLoadingGoal;
+  const isEditLoadFailed = mode === "edit" && isGoalLoadError;
 
-  const adjustDoneCount = (delta: number) => {
-    if (!targetNum || Number.isNaN(targetNum)) return;
-    const current = Number.isNaN(doneNum) ? 0 : doneNum;
-    const next = Math.min(Math.max(current + delta, 0), targetNum);
-    setForm((f) => ({ ...f, doneCount: String(next) }));
-  };
+  if (isEditLoading) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="goal-modal-title"
+      >
+        <div className="rounded-2xl bg-white p-8 text-center shadow-xl">
+          <p id="goal-modal-title" className="text-sm text-gray-600">
+            Carregando meta…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditLoadFailed) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="goal-modal-title"
+      >
+        <div className="rounded-2xl bg-white p-8 text-center shadow-xl">
+          <p id="goal-modal-title" className="mb-4 text-sm text-red-600">
+            Não foi possível carregar a meta.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-calendar-cardinal px-4 py-2 text-sm font-medium text-white"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = getGoalProgress({
+    checklist: form.checklist,
+    targetCount: freshGoal?.targetCount ?? goal?.targetCount,
+    doneCount: freshGoal?.doneCount ?? goal?.doneCount,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,26 +370,8 @@ export function GoalFormModal({
       return;
     }
 
-    const targetCountRaw = form.targetCount.trim();
-    const targetCount = targetCountRaw ? Number.parseInt(targetCountRaw, 10) : null;
-    const doneCount = form.doneCount.trim()
-      ? Number.parseInt(form.doneCount, 10)
-      : 0;
-
-    if (targetCountRaw && (Number.isNaN(targetCount) || (targetCount ?? 0) < 1)) {
-      setError("Informe um total válido (mínimo 1) ou deixe o campo vazio.");
-      return;
-    }
-
-    if (targetCount !== null && (Number.isNaN(doneCount) || doneCount < 0)) {
-      setError("Informe uma quantidade concluída válida.");
-      return;
-    }
-
-    if (targetCount !== null && doneCount > targetCount) {
-      setError("As concluídas não podem ser maiores que o total.");
-      return;
-    }
+    const checklist =
+      checklistFieldRef.current?.getItemsForSave() ?? form.checklist;
 
     const payload = {
       title: form.title.trim(),
@@ -271,12 +379,8 @@ export function GoalFormModal({
       status: form.status,
       startDate: new Date(`${form.startDate}T00:00:00.000Z`),
       dueDate: new Date(`${form.dueDate}T00:00:00.000Z`),
-      assigneeName: form.assigneeName.trim() || null,
-      assigneeAvatarUrl: form.assigneeAvatarUrl.trim() || null,
-      targetCount,
-      doneCount: targetCount === null ? 0 : doneCount,
-      progressUnit:
-        targetCount === null ? null : form.progressUnit.trim() || null,
+      assigneeId: form.assigneeId.trim() || null,
+      checklist,
     };
 
     if (payload.dueDate < payload.startDate) {
@@ -286,8 +390,10 @@ export function GoalFormModal({
 
     if (mode === "create") {
       createMutation.mutate(payload);
-    } else if (goal) {
-      updateMutation.mutate({ id: goal.id, patch: payload });
+    } else if (activeGoalId) {
+      updateMutation.mutate({ id: activeGoalId, patch: payload });
+    } else {
+      setError("Não foi possível identificar a meta para salvar.");
     }
   };
 
@@ -409,153 +515,65 @@ export function GoalFormModal({
             <p className="text-sm font-medium text-gray-700">
               Acompanhamento (opcional)
             </p>
+            {showOrphanProgressWarning ? (
+              <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                O progresso estava salvo sem os itens do checklist. Adicione as
+                etapas novamente para acompanhar o andamento.
+              </p>
+            ) : null}
+            <GoalChecklistField
+              ref={checklistFieldRef}
+              items={form.checklist}
+              readOnly={readOnly && !checklistInteractive}
+              toggleOnly={checklistInteractive}
+              onChange={handleChecklistChange}
+            />
+            {progress.hasProgress && readOnly ? (
+              <p className="text-xs text-gray-500">
+                {progress.done}/{progress.total} itens concluídos ({progress.percent}%)
+              </p>
+            ) : null}
+          </div>
 
-            <div>
-              <label
-                htmlFor="goal-progress-unit"
-                className="mb-1 block text-sm font-medium text-gray-700"
-              >
-                Unidade
-              </label>
-              <input
-                id="goal-progress-unit"
-                type="text"
-                value={form.progressUnit}
+          <div>
+            <label
+              htmlFor="goal-assignee"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Responsável (opcional)
+            </label>
+            {readOnly ? (
+              <p className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-800">
+                {getChatContactById(form.assigneeId)?.name ??
+                  freshGoal?.assigneeName ??
+                  goal?.assigneeName ??
+                  "Nenhum selecionado"}
+              </p>
+            ) : (
+              <select
+                id="goal-assignee"
+                value={form.assigneeId}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, progressUnit: e.target.value }))
+                  setForm((f) => ({ ...f, assigneeId: e.target.value }))
                 }
-                placeholder="Ex.: fichas"
                 disabled={fieldDisabled}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
-                maxLength={40}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="goal-target-count"
-                className="mb-1 block text-sm font-medium text-gray-700"
               >
-                Total
-              </label>
-              <input
-                id="goal-target-count"
-                type="number"
-                min={1}
-                value={form.targetCount}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, targetCount: e.target.value }))
-                }
-                placeholder="Ex.: 30"
-                disabled={fieldDisabled}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
-              />
-            </div>
-
-            {progress.hasProgress && (
-              <>
-                <div>
-                  <label
-                    htmlFor="goal-done-count"
-                    className="mb-1 block text-sm font-medium text-gray-700"
-                  >
-                    Concluídas
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {!readOnly ? (
-                      <button
-                        type="button"
-                        onClick={() => adjustDoneCount(-1)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-                        aria-label="Diminuir concluídas"
-                      >
-                        −
-                      </button>
-                    ) : null}
-                    <input
-                      id="goal-done-count"
-                      type="number"
-                      min={0}
-                      max={progress.total}
-                      value={form.doneCount}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, doneCount: e.target.value }))
-                      }
-                      disabled={fieldDisabled}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
-                    />
-                    {!readOnly ? (
-                      <button
-                        type="button"
-                        onClick={() => adjustDoneCount(1)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-lg font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal"
-                        aria-label="Aumentar concluídas"
-                      >
-                        +
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div>
-                  <div
-                    className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200"
-                    role="progressbar"
-                    aria-valuenow={progress.percent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label="Progresso da meta"
-                  >
-                    <div
-                      className="h-full rounded-full bg-calendar-cardinal transition-all duration-300"
-                      style={{ width: `${progress.percent}%` }}
-                    />
-                  </div>
-                  <p className="mt-1.5 text-xs text-gray-500">
-                    {progress.done}/{progress.total}
-                    {form.progressUnit.trim()
-                      ? ` ${form.progressUnit.trim()}`
-                      : ""}{" "}
-                    ({progress.percent}%)
-                  </p>
-                </div>
-              </>
+                <option value="">Nenhum selecionado</option>
+                {CHAT_CONTACTS.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name}
+                  </option>
+                ))}
+              </select>
             )}
           </div>
 
-          <div>
-            <label htmlFor="goal-assignee" className="mb-1 block text-sm font-medium text-gray-700">
-              Responsável (opcional)
-            </label>
-            <input
-              id="goal-assignee"
-              type="text"
-              value={form.assigneeName}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, assigneeName: e.target.value }))
-              }
-              disabled={fieldDisabled}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
-              maxLength={200}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="goal-avatar" className="mb-1 block text-sm font-medium text-gray-700">
-              URL do avatar (opcional)
-            </label>
-            <input
-              id="goal-avatar"
-              type="url"
-              value={form.assigneeAvatarUrl}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, assigneeAvatarUrl: e.target.value }))
-              }
-              placeholder="https://..."
-              disabled={fieldDisabled}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-calendar-cardinal focus:outline-none focus:ring-1 focus:ring-calendar-cardinal disabled:bg-gray-100 disabled:text-gray-700"
-            />
-          </div>
+          {checklistInteractive && updateChecklistMutation.isPending ? (
+            <p role="status" className="text-sm text-gray-500">
+              Salvando progresso…
+            </p>
+          ) : null}
 
           {error && (
             <p role="alert" className="text-sm text-red-600">
@@ -603,11 +621,7 @@ function buildFormFromGoal(
     status: draft.status,
     startDate: dateInput,
     dueDate: initialStartDate ? dateInput : toInputDate(draft.dueDate),
-    assigneeName: draft.assigneeName ?? "",
-    assigneeAvatarUrl: draft.assigneeAvatarUrl ?? "",
-    targetCount:
-      draft.targetCount != null ? String(draft.targetCount) : "",
-    doneCount: String(draft.doneCount ?? 0),
-    progressUnit: draft.progressUnit ?? "",
+    assigneeId: draft.assigneeId ?? "",
+    checklist: [...(draft.checklist ?? [])],
   };
 }

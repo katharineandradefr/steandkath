@@ -58,7 +58,11 @@ export function PendencyDetailModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && initialValues) {
-      setDraft({ ...initialValues, attachments: [...initialValues.attachments] });
+      setDraft({
+        ...initialValues,
+        attachments: [...initialValues.attachments],
+        checklist: [...initialValues.checklist],
+      });
     } else {
       setDraft(createEmptyPendencyDraft());
     }

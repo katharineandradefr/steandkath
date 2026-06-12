@@ -1,7 +1,4 @@
-import Image from "next/image";
-
 import {
-  DEFAULT_GOAL_AVATAR_URL,
   formatGoalDueDate,
   getGoalProgress,
   GOAL_STATUS_LABELS,
@@ -29,6 +26,7 @@ type GoalCardProps = {
   goal: Goal;
   selected?: boolean;
   onSelect?: () => void;
+  onOpenView?: () => void;
 };
 
 /**
@@ -96,13 +94,20 @@ function GoalSituationIndicator({ goal }: { goal: Goal }) {
 /**
  * Card de meta no painel lateral do calendário.
  */
-export function GoalCard({ goal, selected = false, onSelect }: GoalCardProps) {
-  const avatarUrl = goal.assigneeAvatarUrl ?? DEFAULT_GOAL_AVATAR_URL;
-
+export function GoalCard({
+  goal,
+  selected = false,
+  onSelect,
+  onOpenView,
+}: GoalCardProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        onOpenView?.();
+      }}
       className={`flex w-full items-center gap-3 rounded-lg border-l-4 border-calendar-cardinal p-3 text-left transition-all duration-200 ease-out hover:scale-[1.02] hover:bg-calendar-ice hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-calendar-cardinal ${
         selected
           ? "bg-gray-200 ring-2 ring-calendar-cardinal/60 shadow-md"
@@ -119,13 +124,6 @@ export function GoalCard({ goal, selected = false, onSelect }: GoalCardProps) {
         </p>
       </div>
       <GoalSituationIndicator goal={goal} />
-      <Image
-        src={avatarUrl}
-        alt={goal.assigneeName ? `Responsável: ${goal.assigneeName}` : "Responsável"}
-        width={40}
-        height={40}
-        className="h-10 w-10 shrink-0 rounded-full object-cover"
-      />
     </button>
   );
 }

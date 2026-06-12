@@ -28,6 +28,7 @@ import {
 } from "~/shared/pendency";
 import { usePermissions } from "~/app/_components/active-user-provider";
 import { usePendencyNavigation } from "~/app/_components/pendency-navigation-provider";
+import { CHAT_CONTACTS } from "~/shared/chat-contacts";
 import {
   getPendencyBoardColumns,
   pendencyActionToPermissionKey,
@@ -82,15 +83,14 @@ export function PendencyBoard() {
   const listInput = {};
   const { data: pendencies = [], isLoading, isError } =
     api.pendency.list.useQuery(listInput);
-  const { data: users = [] } = api.user.list.useQuery();
 
   const userNameById = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const user of users) {
-      map[user.id] = user.name;
+    for (const contact of CHAT_CONTACTS) {
+      map[contact.id] = contact.name;
     }
     return map;
-  }, [users]);
+  }, []);
 
   const setListCache = (updater: (prev: Pendency[]) => Pendency[]) => {
     utils.pendency.list.setData(listInput, (prev) =>

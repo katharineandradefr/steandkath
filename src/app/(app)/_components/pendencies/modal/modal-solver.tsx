@@ -2,7 +2,10 @@
 
 import { UserRound } from "lucide-react";
 
-import { api } from "~/trpc/react";
+import {
+  CHAT_CONTACTS,
+  getChatContactById,
+} from "~/shared/chat-contacts";
 
 type Props = {
   solverId: string | null;
@@ -18,9 +21,7 @@ export function ModalSolver({
   readOnly = false,
   onSolverChange,
 }: Props) {
-  const { data: users = [], isLoading } = api.user.list.useQuery();
-
-  const selectedUser = users.find((user) => user.id === solverId);
+  const selectedContact = getChatContactById(solverId ?? "");
 
   return (
     <section className="border-t border-sidebar-border py-4">
@@ -32,32 +33,35 @@ export function ModalSolver({
 
       {readOnly ? (
         <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/80">
-          {selectedUser?.name ?? "Nenhum selecionado"}
+          {selectedContact?.name ?? "Nenhum selecionado"}
         </p>
       ) : (
         <>
-          <label className="mb-1.5 block text-xs font-medium text-white/50">
+          <label
+            htmlFor="pendency-solver"
+            className="mb-1.5 block text-xs font-medium text-white/50"
+          >
             Selecionar usuário
           </label>
           <select
+            id="pendency-solver"
             value={solverId ?? ""}
             onChange={(event) => {
               const value = event.target.value;
               onSolverChange(value.length > 0 ? value : null);
             }}
-            disabled={isLoading}
-            className="pendency-direct-select w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50"
+            className="pendency-direct-select w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           >
             <option value="" className="pendency-direct-select-option">
-              {isLoading ? "Carregando usuários…" : "Nenhum selecionado"}
+              Nenhum selecionado
             </option>
-            {users.map((user) => (
+            {CHAT_CONTACTS.map((contact) => (
               <option
-                key={user.id}
-                value={user.id}
+                key={contact.id}
+                value={contact.id}
                 className="pendency-direct-select-option"
               >
-                {user.name}
+                {contact.name}
               </option>
             ))}
           </select>

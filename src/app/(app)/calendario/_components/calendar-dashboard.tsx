@@ -26,6 +26,7 @@ export function CalendarDashboard({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [goalReadOnly, setGoalReadOnly] = useState(false);
+  const [goalChecklistInteractive, setGoalChecklistInteractive] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [goalInitialStartDate, setGoalInitialStartDate] = useState<Date | null>(
@@ -72,6 +73,7 @@ export function CalendarDashboard({
     setModalMode("create");
     setEditingGoal(null);
     setGoalReadOnly(false);
+    setGoalChecklistInteractive(false);
     setGoalInitialStartDate(null);
     setModalOpen(true);
   };
@@ -89,6 +91,7 @@ export function CalendarDashboard({
         setModalMode("create");
         setEditingGoal(null);
         setGoalReadOnly(false);
+        setGoalChecklistInteractive(false);
         setGoalInitialStartDate(date);
         setModalOpen(true);
       }
@@ -100,14 +103,17 @@ export function CalendarDashboard({
     setModalMode("edit");
     setEditingGoal(goal);
     setGoalReadOnly(false);
+    setGoalChecklistInteractive(false);
     setGoalInitialStartDate(null);
     setModalOpen(true);
   };
 
   const handleViewGoal = (goal: Goal) => {
+    if (!can("goal.view")) return;
     setModalMode("edit");
     setEditingGoal(goal);
     setGoalReadOnly(true);
+    setGoalChecklistInteractive(true);
     setGoalInitialStartDate(null);
     setModalOpen(true);
   };
@@ -168,7 +174,10 @@ export function CalendarDashboard({
         mode={modalMode}
         goal={editingGoal}
         readOnly={goalReadOnly}
+        checklistInteractive={goalChecklistInteractive}
         initialStartDate={goalInitialStartDate}
+        monthQueryKey={referenceMonth}
+        weekQueryKey={{ referenceDate: weekReferenceDate }}
         onClose={() => setModalOpen(false)}
         onSuccess={() => setSelectedGoalId(null)}
       />
